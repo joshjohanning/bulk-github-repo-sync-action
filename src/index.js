@@ -316,7 +316,7 @@ async function ensureRepository(
     return { created, visibilityUpdated };
   } catch (error) {
     if (error.status === 404) {
-      core.info(`repo doesn't exist`);
+      core.info(`repo does not exist`);
 
       try {
         const isPrivate = visibility === 'private' || visibility === 'internal';
