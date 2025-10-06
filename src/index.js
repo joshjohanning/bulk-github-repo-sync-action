@@ -120,8 +120,15 @@ function deriveInstanceUrl(apiUrl) {
       return 'https://github.com';
     }
     
+    // Check if this looks like it already contains 'api' in the hostname (e.g., api.customersuccess.ghe.com)
+    // Remove 'api.' prefix if present
+    let hostname = url.hostname;
+    if (hostname.startsWith('api.')) {
+      hostname = hostname.substring(4); // Remove 'api.' prefix
+    }
+    
     // GitHub Enterprise Server case - remove /api/v3 or similar path
-    const instanceUrl = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+    const instanceUrl = `${url.protocol}//${hostname}${url.port ? ':' + url.port : ''}`;
     return instanceUrl;
   } catch (error) {
     core.warning(`Failed to parse API URL "${apiUrl}": ${error.message}`);
