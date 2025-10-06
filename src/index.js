@@ -11,8 +11,6 @@
  *   --file, -f                     Repository list YAML file (default: actions-list.yml)
  *   --source-github-token          GitHub PAT for source repositories
  *   --target-github-token          GitHub PAT for target repositories
- *   --source-github-url            Source GitHub server URL (default: https://github.com)
- *   --target-github-url            Target GitHub server URL (defaults to source URL)
  *   --source-github-api-url        Source GitHub API URL (default: https://api.github.com)
  *   --target-github-api-url        Target GitHub API URL (defaults to source API URL)
  *   --overwrite-repo-visibility    Overwrite visibility of existing repos to match YAML (default: false)
@@ -35,7 +33,8 @@
  * Examples:
  *   node sync.js --file=repos.yml
  *   node sync.js --source-github-token=ghp_xxx --target-github-token=ghp_yyy
- *   node sync.js --source-github-url=https://github.com --target-github-url=https://ghe.company.com --target-github-api-url=https://ghe.company.com/api/v3
+ *   node sync.js --target-github-api-url=https://ghe.company.com/api/v3
+ *   node sync.js --source-github-api-url=https://api.github.com --target-github-api-url=https://api.customersuccess.ghe.com
  *   node sync.js --overwrite-repo-visibility --file=repos.yml
  *   node sync.js --force-push --file=repos.yml
  * 
@@ -46,10 +45,8 @@
  *   
  *   SOURCE_GITHUB_TOKEN / INPUT_SOURCE_GITHUB_TOKEN: Source GitHub Personal Access Token
  *   TARGET_GITHUB_TOKEN / INPUT_TARGET_GITHUB_TOKEN: Target GitHub Personal Access Token
- *   SOURCE_GITHUB_URL / INPUT_SOURCE_GITHUB_URL: Source GitHub server URL
- *   SOURCE_GITHUB_API_URL / INPUT_SOURCE_GITHUB_API_URL: Source GitHub API URL
- *   TARGET_GITHUB_URL / INPUT_TARGET_GITHUB_URL: Target GitHub server URL
- *   TARGET_GITHUB_API_URL / INPUT_TARGET_GITHUB_API_URL: Target GitHub API URL
+ *   SOURCE_GITHUB_API_URL / INPUT_SOURCE_GITHUB_API_URL: Source GitHub API URL (instance URL auto-derived)
+ *   TARGET_GITHUB_API_URL / INPUT_TARGET_GITHUB_API_URL: Target GitHub API URL (instance URL auto-derived)
  */
 
 import { Octokit } from '@octokit/rest';
@@ -81,16 +78,6 @@ const argv = yargs(hideBin(process.argv))
     type: 'string',
     description: 'GitHub PAT for target repositories'
   })
-  .option('source-github-url', {
-    type: 'string',
-    description: 'Source GitHub server URL',
-    default: 'https://github.com'
-  })
-  .option('target-github-url', {
-    type: 'string',
-    description: 'Target GitHub server URL',
-    default: 'https://github.com'
-  })
   .option('source-github-api-url', {
     type: 'string',
     description: 'Source GitHub API URL',
@@ -118,6 +105,29 @@ const argv = yargs(hideBin(process.argv))
   .example('$0 --overwrite-repo-visibility --file=repos.yml', 'Update visibility of existing repos')
   .example('$0 --force-push --file=repos.yml', 'Force push to overwrite target repository history')
   .argv;
+
+/**
+ * Derive instance/server URL from API URL
+ * @param {string} apiUrl - The API URL
+ * @returns {string} The instance/server URL
+ */
+function deriveInstanceUrl(apiUrl) {
+  try {
+    const url = new URL(apiUrl);
+    
+    // GitHub.com case
+    if (url.hostname === 'api.github.com') {
+      return 'https://github.com';
+    }
+    
+    // GitHub Enterprise Server case - remove /api/v3 or similar path
+    const instanceUrl = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+    return instanceUrl;
+  } catch (error) {
+    core.warning(`Failed to parse API URL "${apiUrl}": ${error.message}`);
+    return apiUrl;
+  }
+}
 
 // Configuration - prioritize GitHub Actions inputs, then command line args, then environment variables
 const REPO_LIST = core.getInput('repo-list-file') ||
@@ -150,17 +160,14 @@ const SOURCE_GITHUB_TOKEN = core.getInput('source-github-token') ||
   argv['source-github-token'] ||
   process.env.SOURCE_GITHUB_TOKEN;
 
-const SOURCE_GITHUB_URL = core.getInput('source-github-url') ||
-  process.env.INPUT_SOURCE_GITHUB_URL ||
-  argv['source-github-url'] ||
-  process.env.SOURCE_GITHUB_URL ||
-  'https://github.com';
-
 const SOURCE_GITHUB_API_URL = core.getInput('source-github-api-url') ||
   process.env.INPUT_SOURCE_GITHUB_API_URL ||
   argv['source-github-api-url'] ||
   process.env.SOURCE_GITHUB_API_URL ||
   'https://api.github.com';
+
+// Derive source instance URL from API URL
+const SOURCE_GITHUB_URL = deriveInstanceUrl(SOURCE_GITHUB_API_URL);
 
 // Target configuration
 const TARGET_GITHUB_TOKEN = core.getInput('target-github-token') ||
@@ -168,17 +175,14 @@ const TARGET_GITHUB_TOKEN = core.getInput('target-github-token') ||
   argv['target-github-token'] ||
   process.env.TARGET_GITHUB_TOKEN;
 
-const TARGET_GITHUB_URL = core.getInput('target-github-url') ||
-  process.env.INPUT_TARGET_GITHUB_URL ||
-  argv['target-github-url'] ||
-  process.env.TARGET_GITHUB_URL ||
-  SOURCE_GITHUB_URL;
-
 const TARGET_GITHUB_API_URL = core.getInput('target-github-api-url') ||
   process.env.INPUT_TARGET_GITHUB_API_URL ||
   argv['target-github-api-url'] ||
   process.env.TARGET_GITHUB_API_URL ||
   SOURCE_GITHUB_API_URL;
+
+// Derive target instance URL from API URL
+const TARGET_GITHUB_URL = deriveInstanceUrl(TARGET_GITHUB_API_URL);
 
 // Validation
 if (!SOURCE_GITHUB_TOKEN) {

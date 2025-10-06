@@ -27,11 +27,9 @@
     target-github-token: ${{ secrets.TARGET_GITHUB_TOKEN }}
     overwrite-repo-visibility: true # overwrite repo visibility with what is in yml file; defaults to false
     force-push: false # force push to target repos (overwrites history); defaults to false
-    ### these parameters are only needed if either your source or target is NOT github.com
-    # source-github-url: ${{ github.server_url }} # defaults to https://github.com
-    # source-github-api-url: ${{ github.api_url }} # defaults to https://api.github.com
-    # target-github-url: ${{ github.server_url }} # defaults to https://github.com
-    # target-github-api-url: ${{ github.api_url }} # defaults to https://api.github.com  
+    ### only needed if either your source or target is NOT github.com
+    # target-github-api-url: https://ghes.domain.com/api/v3 # API URL for GHES
+    # source-github-api-url: https://api.github.com # only needed if source is not github.com
 ```
 
 ## Repository List Format
@@ -85,6 +83,7 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
           target-github-token: ${{ steps.target-app-token.outputs.token }}
           overwrite-repo-visibility: true # overwrite repo visibility with what is in yml file; defaults to false
           # force push to target repos (overwrites history); defaults to false
+          # target-github-api-url: https://ghes.domain.com/api/v3 # only needed if target is GHES
 ```
 
 ## Configuration Options
@@ -103,13 +102,11 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `repo-list-file` | YML file with repository configurations | No | - |
+| `repo-list-file` | YML file with repository configurations | Yes | - |
 | `source-github-token` | GitHub PAT for source repositories | Yes | - |
 | `target-github-token` | GitHub PAT for target repositories | No | (uses source token if not specified) |
-| `source-github-url` | Source GitHub server URL | No | `${{ github.server_url }}` |
-| `target-github-url` | Target GitHub server URL | No | `${{ github.server_url }}` |
-| `source-github-api-url` | Source GitHub API URL | No | `${{ github.api_url }}` |
-| `target-github-api-url` | Target GitHub API URL | No | `${{ github.api_url }}` |
+| `source-github-api-url` | Source GitHub API URL (e.g., `https://api.github.com` or `https://ghes.domain.com/api/v3`). Instance URL is auto-derived. | No | `${{ github.api_url }}` |
+| `target-github-api-url` | Target GitHub API URL (e.g., `https://api.github.com` or `https://ghes.domain.com/api/v3`). Instance URL is auto-derived. | No | `${{ github.api_url }}` |
 | `overwrite-repo-visibility` | Force update visibility of existing repos | No | `false` |
 | `force-push` | Force push to target repositories (overwrites history) | No | `false` |
 
