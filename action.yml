@@ -1,37 +1,37 @@
-name: "Bulk GitHub Repository Sync"
-description: "🔄 Sync GitHub repositories between organizations with visibility control, Actions management, and archiving"
+name: 'Bulk GitHub Repository Sync'
+description: '🔄 Sync GitHub repositories between organizations with visibility control, Actions management, and archiving'
 
 branding:
-  icon: "git-branch"
-  color: "blue"
+  icon: 'git-branch'
+  color: 'blue'
 
 inputs:
   repo-list-file:
-    description: "YAML file containing repository mappings with source, target, visibility, and sync options"
+    description: 'YAML file containing repository mappings with source, target, visibility, and sync options'
     required: true
   source-github-token:
-    description: "GitHub Personal Access Token for accessing source repositories"
+    description: 'GitHub Personal Access Token for accessing source repositories'
     required: true
   target-github-token:
-    description: "GitHub Personal Access Token for creating/updating target repositories"
+    description: 'GitHub Personal Access Token for creating/updating target repositories'
     required: false
   source-github-api-url:
-    description: "Source GitHub API URL (e.g., https://api.github.com for GitHub.com or https://ghes.domain.com/api/v3 for GHES). Instance URL is auto-derived."
+    description: 'Source GitHub API URL (e.g., https://api.github.com for GitHub.com or https://ghes.domain.com/api/v3 for GHES). Instance URL is auto-derived.'
     required: false
-    default: "${{ github.api_url }}"
+    default: '${{ github.api_url }}'
   target-github-api-url:
-    description: "Target GitHub API URL (e.g., https://api.github.com for GitHub.com or https://ghes.domain.com/api/v3 for GHES). Instance URL is auto-derived."
+    description: 'Target GitHub API URL (e.g., https://api.github.com for GitHub.com or https://ghes.domain.com/api/v3 for GHES). Instance URL is auto-derived.'
     required: false
-    default: "${{ github.api_url }}"
+    default: '${{ github.api_url }}'
   overwrite-repo-visibility:
-    description: "Overwrite visibility of existing repositories to match YAML config"
+    description: 'Overwrite visibility of existing repositories to match YAML config'
     required: false
-    default: "false"
+    default: 'false'
   force-push:
-    description: "Force push to target repositories (overwrites history)"
+    description: 'Force push to target repositories (overwrites history)'
     required: false
-    default: "false"
+    default: 'false'
 
 runs:
-  using: "node20"
-  main: "dist/index.js"
+  using: 'node20'
+  main: 'dist/index.js'
