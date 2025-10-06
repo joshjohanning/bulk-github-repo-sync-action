@@ -15,20 +15,12 @@ inputs:
   target-github-token:
     description: "GitHub Personal Access Token for creating/updating target repositories"
     required: false
-  source-github-url:
-    description: "Source GitHub server URL  (for GitHub Enterprise Server, usually like https://ghes.domain.com)"
-    required: false
-    default: "${{ github.server_url }}"
   source-github-api-url:
-    description: "Source GitHub API URL (for GitHub Enterprise Server, usually like: https://ghes.domain.com/api/v3)"
+    description: "Source GitHub API URL (e.g., https://api.github.com for GitHub.com or https://ghes.domain.com/api/v3 for GHES). Instance URL is auto-derived."
     required: false
     default: "${{ github.api_url }}"
-  target-github-url:
-    description: "Target GitHub server URL (for GitHub Enterprise Server, usually like https://ghes.domain.com)"
-    required: false
-    default: "${{ github.server_url }}"
   target-github-api-url:
-    description: "Target GitHub API URL (for GitHub Enterprise Server, usually like: https://ghes.domain.com/api/v3)"
+    description: "Target GitHub API URL (e.g., https://api.github.com for GitHub.com or https://ghes.domain.com/api/v3 for GHES). Instance URL is auto-derived."
     required: false
     default: "${{ github.api_url }}"
   overwrite-repo-visibility:
