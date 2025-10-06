@@ -5,7 +5,7 @@
 ## Features
 
 - 🔄 **Mirror cloning** - Complete repository sync including all branches and tags
-- 🏗️ **Automatic repository creation** - Creates target repos if they don't exist  
+- 🏗️ **Automatic repository creation** - Creates target repos if they don't exist
 - 👁️ **Visibility control** - Set repository visibility per repo (private/public/internal)
 - 🚫 **GitHub Actions management** - Disable Actions on target repositories
 - 📦 **Repository archiving** - Archive repositories after sync (with smart unarchive/re-archive)
@@ -60,55 +60,55 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
 > - **Target App**: Repository **Read and Write** access to `actions`, `administration`, `contents`, and `metadata`
 
 ```yml
-      - uses: actions/checkout@v5
-      # source
-      - uses: actions/create-github-app-token@v2
-        id: source-app-token
-        with:
-          app-id: ${{ vars.SOURCE_APP_ID }}
-          private-key: ${{ secrets.SOURCE_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-      # target
-      - uses: actions/create-github-app-token@v2
-        id: target-app-token
-        with:
-          app-id: ${{ vars.TARGET_APP_ID }}
-          private-key: ${{ secrets.TARGET_APP_PRIVATE_KEY }}
-          owner: joshjohanning-emu
-      - name: Bulk GitHub Repository Sync
-        uses: joshjohanning/bulk-github-repo-sync-action@v1
-        with:
-          repo-list-file: repos.yml
-          source-github-token: ${{ steps.source-app-token.outputs.token }}
-          target-github-token: ${{ steps.target-app-token.outputs.token }}
-          overwrite-repo-visibility: true # overwrite repo visibility with what is in yml file; defaults to false
-          # force push to target repos (overwrites history); defaults to false
-          # target-github-api-url: https://ghes.domain.com/api/v3 # only needed if target is GHES
+- uses: actions/checkout@v5
+# source
+- uses: actions/create-github-app-token@v2
+  id: source-app-token
+  with:
+    app-id: ${{ vars.SOURCE_APP_ID }}
+    private-key: ${{ secrets.SOURCE_APP_PRIVATE_KEY }}
+    owner: ${{ github.repository_owner }}
+# target
+- uses: actions/create-github-app-token@v2
+  id: target-app-token
+  with:
+    app-id: ${{ vars.TARGET_APP_ID }}
+    private-key: ${{ secrets.TARGET_APP_PRIVATE_KEY }}
+    owner: joshjohanning-emu
+- name: Bulk GitHub Repository Sync
+  uses: joshjohanning/bulk-github-repo-sync-action@v1
+  with:
+    repo-list-file: repos.yml
+    source-github-token: ${{ steps.source-app-token.outputs.token }}
+    target-github-token: ${{ steps.target-app-token.outputs.token }}
+    overwrite-repo-visibility: true # overwrite repo visibility with what is in yml file; defaults to false
+    # force push to target repos (overwrites history); defaults to false
+    # target-github-api-url: https://ghes.domain.com/api/v3 # only needed if target is GHES
 ```
 
 ## Configuration Options
 
 ### Per-Repository Settings (YML)
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `source` | Source repository in `owner/repo` format | - |
-| `target` | Target repository in `owner/repo` format | - |
-| `visibility` | Repository visibility (private/public/internal) | `private` |
-| `disable-github-actions` | Disable GitHub Actions on target repository | `true` |
-| `archive-after-sync` | Archive repository after successful sync | `false` |
+| Setting                  | Description                                     | Default   |
+| ------------------------ | ----------------------------------------------- | --------- |
+| `source`                 | Source repository in `owner/repo` format        | -         |
+| `target`                 | Target repository in `owner/repo` format        | -         |
+| `visibility`             | Repository visibility (private/public/internal) | `private` |
+| `disable-github-actions` | Disable GitHub Actions on target repository     | `true`    |
+| `archive-after-sync`     | Archive repository after successful sync        | `false`   |
 
 ### Action Inputs
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `repo-list-file` | YML file with repository configurations | Yes | - |
-| `source-github-token` | GitHub PAT for source repositories | Yes | - |
-| `target-github-token` | GitHub PAT for target repositories | No | (uses source token if not specified) |
-| `source-github-api-url` | Source GitHub API URL (e.g., `https://api.github.com` or `https://ghes.domain.com/api/v3`). Instance URL is auto-derived. | No | `${{ github.api_url }}` |
-| `target-github-api-url` | Target GitHub API URL (e.g., `https://api.github.com` or `https://ghes.domain.com/api/v3`). Instance URL is auto-derived. | No | `${{ github.api_url }}` |
-| `overwrite-repo-visibility` | Force update visibility of existing repos | No | `false` |
-| `force-push` | Force push to target repositories (overwrites history) | No | `false` |
+| Input                       | Description                                                                                                               | Required | Default                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------ |
+| `repo-list-file`            | YML file with repository configurations                                                                                   | Yes      | -                                    |
+| `source-github-token`       | GitHub PAT for source repositories                                                                                        | Yes      | -                                    |
+| `target-github-token`       | GitHub PAT for target repositories                                                                                        | No       | (uses source token if not specified) |
+| `source-github-api-url`     | Source GitHub API URL (e.g., `https://api.github.com` or `https://ghes.domain.com/api/v3`). Instance URL is auto-derived. | No       | `${{ github.api_url }}`              |
+| `target-github-api-url`     | Target GitHub API URL (e.g., `https://api.github.com` or `https://ghes.domain.com/api/v3`). Instance URL is auto-derived. | No       | `${{ github.api_url }}`              |
+| `overwrite-repo-visibility` | Force update visibility of existing repos                                                                                 | No       | `false`                              |
+| `force-push`                | Force push to target repositories (overwrites history)                                                                    | No       | `false`                              |
 
 ## Local Command Line Usage
 

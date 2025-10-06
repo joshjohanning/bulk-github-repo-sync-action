@@ -3,10 +3,10 @@
 /**
  * Repository Sync Script (JavaScript/Node.js version)
  * Syncs GitHub repositories from source to target organizations using Octokit
- * 
- * Usage: 
+ *
+ * Usage:
  *   node sync.js [--file=repo_list_file] [--source-github-token=token] [--target-github-token=token] [options]
- * 
+ *
  * Command Line Options:
  *   --file, -f                     Repository list YAML file (default: actions-list.yml)
  *   --source-github-token          GitHub PAT for source repositories
@@ -16,7 +16,7 @@
  *   --overwrite-repo-visibility    Overwrite visibility of existing repos to match YAML (default: false)
  *   --force-push                   Force push to target repositories (default: false)
  *   --help, -h                     Show help
- * 
+ *
  * Repository List Format (YAML):
  *   repos:
  *     - source: org1/repo1
@@ -29,7 +29,7 @@
  *       visibility: public
  *       disable-github-actions: false    # override default
  *       archive-after-sync: true         # override default
- * 
+ *
  * Examples:
  *   node sync.js --file=repos.yml
  *   node sync.js --source-github-token=ghp_xxx --target-github-token=ghp_yyy
@@ -37,12 +37,12 @@
  *   node sync.js --source-github-api-url=https://api.github.com --target-github-api-url=https://api.customersuccess.ghe.com
  *   node sync.js --overwrite-repo-visibility --file=repos.yml
  *   node sync.js --force-push --file=repos.yml
- * 
+ *
  * Environment Variables (fallback order):
  *   1. GitHub Actions inputs (INPUT_* variables) (highest priority)
  *   2. Command line arguments
  *   3. Direct environment variables
- *   
+ *
  *   SOURCE_GITHUB_TOKEN / INPUT_SOURCE_GITHUB_TOKEN: Source GitHub Personal Access Token
  *   TARGET_GITHUB_TOKEN / INPUT_TARGET_GITHUB_TOKEN: Target GitHub Personal Access Token
  *   SOURCE_GITHUB_API_URL / INPUT_SOURCE_GITHUB_API_URL: Source GitHub API URL (instance URL auto-derived)
@@ -101,10 +101,12 @@ const argv = yargs(hideBin(process.argv))
   .help()
   .alias('help', 'h')
   .example('$0 --file=repos.yml', 'Sync repositories listed in repos.yml')
-  .example('$0 --source-github-token=ghp_xxx --target-github-token=ghp_yyy', 'Use different tokens for source and target')
+  .example(
+    '$0 --source-github-token=ghp_xxx --target-github-token=ghp_yyy',
+    'Use different tokens for source and target'
+  )
   .example('$0 --overwrite-repo-visibility --file=repos.yml', 'Update visibility of existing repos')
-  .example('$0 --force-push --file=repos.yml', 'Force push to overwrite target repository history')
-  .argv;
+  .example('$0 --force-push --file=repos.yml', 'Force push to overwrite target repository history').argv;
 
 /**
  * Derive instance/server URL from API URL
@@ -114,14 +116,21 @@ const argv = yargs(hideBin(process.argv))
 function deriveInstanceUrl(apiUrl) {
   try {
     const url = new URL(apiUrl);
-    
+
     // GitHub.com case
     if (url.hostname === 'api.github.com') {
       return 'https://github.com';
     }
-    
+
+    // Check if this looks like it already contains 'api' in the hostname (e.g., api.customersuccess.ghe.com)
+    // Remove 'api.' prefix if present
+    let hostname = url.hostname;
+    if (hostname.startsWith('api.')) {
+      hostname = hostname.substring(4); // Remove 'api.' prefix
+    }
+
     // GitHub Enterprise Server case - remove /api/v3 or similar path
-    const instanceUrl = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+    const instanceUrl = `${url.protocol}//${hostname}${url.port ? ':' + url.port : ''}`;
     return instanceUrl;
   } catch (error) {
     core.warning(`Failed to parse API URL "${apiUrl}": ${error.message}`);
@@ -130,10 +139,8 @@ function deriveInstanceUrl(apiUrl) {
 }
 
 // Configuration - prioritize GitHub Actions inputs, then command line args, then environment variables
-const REPO_LIST = core.getInput('repo-list-file') ||
-  process.env.INPUT_REPO_LIST_FILE ||
-  argv.file ||
-  'actions-list.yml';
+const REPO_LIST =
+  core.getInput('repo-list-file') || process.env.INPUT_REPO_LIST_FILE || argv.file || 'actions-list.yml';
 
 // Safe boolean input reading for local execution
 function safeBooleanInput(name) {
@@ -144,23 +151,24 @@ function safeBooleanInput(name) {
   }
 }
 
-const OVERWRITE_VISIBILITY = safeBooleanInput('overwrite-repo-visibility') ||
+const OVERWRITE_VISIBILITY =
+  safeBooleanInput('overwrite-repo-visibility') ||
   process.env.INPUT_OVERWRITE_REPO_VISIBILITY === 'true' ||
   argv['overwrite-repo-visibility'] ||
   false;
 
-const FORCE_PUSH = safeBooleanInput('force-push') ||
-  process.env.INPUT_FORCE_PUSH === 'true' ||
-  argv['force-push'] ||
-  false;
+const FORCE_PUSH =
+  safeBooleanInput('force-push') || process.env.INPUT_FORCE_PUSH === 'true' || argv['force-push'] || false;
 
 // Source configuration
-const SOURCE_GITHUB_TOKEN = core.getInput('source-github-token') ||
+const SOURCE_GITHUB_TOKEN =
+  core.getInput('source-github-token') ||
   process.env.INPUT_SOURCE_GITHUB_TOKEN ||
   argv['source-github-token'] ||
   process.env.SOURCE_GITHUB_TOKEN;
 
-const SOURCE_GITHUB_API_URL = core.getInput('source-github-api-url') ||
+const SOURCE_GITHUB_API_URL =
+  core.getInput('source-github-api-url') ||
   process.env.INPUT_SOURCE_GITHUB_API_URL ||
   argv['source-github-api-url'] ||
   process.env.SOURCE_GITHUB_API_URL ||
@@ -170,12 +178,14 @@ const SOURCE_GITHUB_API_URL = core.getInput('source-github-api-url') ||
 const SOURCE_GITHUB_URL = deriveInstanceUrl(SOURCE_GITHUB_API_URL);
 
 // Target configuration
-const TARGET_GITHUB_TOKEN = core.getInput('target-github-token') ||
+const TARGET_GITHUB_TOKEN =
+  core.getInput('target-github-token') ||
   process.env.INPUT_TARGET_GITHUB_TOKEN ||
   argv['target-github-token'] ||
   process.env.TARGET_GITHUB_TOKEN;
 
-const TARGET_GITHUB_API_URL = core.getInput('target-github-api-url') ||
+const TARGET_GITHUB_API_URL =
+  core.getInput('target-github-api-url') ||
   process.env.INPUT_TARGET_GITHUB_API_URL ||
   argv['target-github-api-url'] ||
   process.env.TARGET_GITHUB_API_URL ||
@@ -198,7 +208,9 @@ if (!TARGET_GITHUB_TOKEN) {
 core.info('Configuration:');
 core.info(`  Source: ${SOURCE_GITHUB_URL} (API: ${SOURCE_GITHUB_API_URL})`);
 core.info(`  Target: ${TARGET_GITHUB_URL} (API: ${TARGET_GITHUB_API_URL})`);
-core.info(`  Tokens: ${TARGET_GITHUB_TOKEN === SOURCE_GITHUB_TOKEN ? 'same token for both' : 'different tokens'} for source/target`);
+core.info(
+  `  Tokens: ${TARGET_GITHUB_TOKEN === SOURCE_GITHUB_TOKEN ? 'same token for both' : 'different tokens'} for source/target`
+);
 
 const repoListPath = resolve(REPO_LIST);
 if (!existsSync(repoListPath)) {
@@ -221,12 +233,12 @@ const targetOctokit = new Octokit({
  * GitHub Actions grouping helper
  */
 async function githubGroup(name, fn) {
-  console.log(`::group::${name}`);
+  core.info(`::group::${name}`);
 
   try {
     return await fn();
   } finally {
-    console.log('::endgroup::');
+    core.info('::endgroup::');
   }
 }
 
@@ -252,14 +264,20 @@ function execCommand(command, options = {}) {
       error.message = sanitizeError(error);
       throw error;
     }
-    console.log(`Command failed (ignoring): ${command}`);
+    core.info(`Command failed (ignoring): ${command}`);
   }
 }
 
 /**
  * Check if repository exists, create if it doesn't
  */
-async function ensureRepository(targetOrg, targetRepo, visibility = 'private', description = '', overwriteVisibility = false) {
+async function ensureRepository(
+  targetOrg,
+  targetRepo,
+  visibility = 'private',
+  description = '',
+  overwriteVisibility = false
+) {
   let created = false;
   let visibilityUpdated = false;
 
@@ -269,40 +287,40 @@ async function ensureRepository(targetOrg, targetRepo, visibility = 'private', d
       repo: targetRepo
     });
 
-    console.log('repo exists');
+    core.info('repo exists');
 
     // Check if we need to update visibility
     if (overwriteVisibility) {
       const currentVisibility = repo.visibility;
 
-      console.log(`Current visibility: ${currentVisibility}, Target visibility: ${visibility}`);
+      core.info(`Current visibility: ${currentVisibility}, Target visibility: ${visibility}`);
 
       if (currentVisibility !== visibility) {
-        console.log(`Updating visibility from ${currentVisibility} to ${visibility}`);
+        core.info(`Updating visibility from ${currentVisibility} to ${visibility}`);
         try {
           await targetOctokit.rest.repos.update({
             owner: targetOrg,
             repo: targetRepo,
             visibility: visibility
           });
-          console.log(`repo visibility updated to ${visibility}`);
+          core.info(`repo visibility updated to ${visibility}`);
           visibilityUpdated = true;
         } catch (updateError) {
           core.warning(`Could not update repo visibility: ${updateError.message}`);
         }
       } else {
-        console.log(`Visibility already matches (${currentVisibility})`);
+        core.info(`Visibility already matches (${currentVisibility})`);
       }
     }
 
     return { created, visibilityUpdated };
   } catch (error) {
     if (error.status === 404) {
-      console.log("repo doesn't exist");
+      core.info(`repo does not exist`);
 
       try {
         const isPrivate = visibility === 'private' || visibility === 'internal';
-        const { data: newRepo } = await targetOctokit.rest.repos.createInOrg({
+        await targetOctokit.rest.repos.createInOrg({
           org: targetOrg,
           name: targetRepo,
           private: isPrivate,
@@ -310,7 +328,7 @@ async function ensureRepository(targetOrg, targetRepo, visibility = 'private', d
           description: description
         });
 
-        console.log(`repo created (${visibility})`);
+        core.info(`repo created (${visibility})`);
         created = true;
         return { created, visibilityUpdated };
       } catch (createError) {
@@ -334,7 +352,7 @@ async function disableActions(targetOrg, targetRepo) {
       repo: targetRepo,
       enabled: false
     });
-    console.log('🚫 GitHub Actions disabled');
+    core.info('🚫 GitHub Actions disabled');
     return true;
   } catch (error) {
     core.warning(`Could not disable GitHub Actions: ${error.message}`);
@@ -353,16 +371,16 @@ async function ensureRepositoryUnarchived(targetOrg, targetRepo) {
     });
 
     if (repo.archived) {
-      console.log('📦 Repository is archived, unarchiving for sync...');
+      core.info('📦 Repository is archived, unarchiving for sync...');
       await targetOctokit.rest.repos.update({
         owner: targetOrg,
         repo: targetRepo,
         archived: false
       });
-      console.log('📂 Repository unarchived');
+      core.info('📂 Repository unarchived');
       return { wasArchived: true };
     } else {
-      console.log('📂 Repository is not archived');
+      core.info('📂 Repository is not archived');
       return { wasArchived: false };
     }
   } catch (error) {
@@ -381,7 +399,7 @@ async function archiveRepository(targetOrg, targetRepo) {
       repo: targetRepo,
       archived: true
     });
-    console.log('📦 Repository archived');
+    core.info('📦 Repository archived');
     return true;
   } catch (error) {
     core.warning(`Could not archive repository: ${error.message}`);
@@ -397,8 +415,8 @@ async function mirrorRepository(repoConfig) {
     source,
     target,
     visibility = 'private',
-    'disable-github-actions': disableActionsForRepo = true,    // default to true
-    'archive-after-sync': archiveAfterSync = false           // default to false
+    'disable-github-actions': disableActionsForRepo = true, // default to true
+    'archive-after-sync': archiveAfterSync = false // default to false
   } = repoConfig;
   const [sourceOrg, sourceRepoName] = source.split('/');
   const [targetOrg, targetRepoName] = target.split('/');
@@ -413,8 +431,8 @@ async function mirrorRepository(repoConfig) {
   const tempDir = mkdtempSync(join(tmpdir(), 'repo-sync-'));
   const repoDir = join(tempDir, `${sourceRepoName}.git`);
 
-  console.log(`Processing: ${source} → ${target} (${visibility})`);
-  console.log(`Using temp directory: ${tempDir}`);
+  core.info(`Processing: ${source} → ${target} (${visibility})`);
+  core.info(`Using temp directory: ${tempDir}`);
 
   // Fetch source repository description
   let description = '';
@@ -424,7 +442,7 @@ async function mirrorRepository(repoConfig) {
       repo: sourceRepoName
     });
     description = sourceRepo.description || '';
-    console.log(`Source repo description: ${description || '(no description)'}`);
+    core.info(`Source repo description: ${description || '(no description)'}`);
   } catch (error) {
     core.warning(`Could not fetch source repo description: ${error.message}`);
   }
@@ -433,22 +451,21 @@ async function mirrorRepository(repoConfig) {
   const repoStatus = await ensureRepository(targetOrg, targetRepoName, visibility, description, OVERWRITE_VISIBILITY);
 
   // Ensure repository is unarchived for sync (if archive option is enabled)
-  let archiveStatus = { wasArchived: false };
   if (archiveAfterSync) {
-    console.log('Checking archive status...');
-    archiveStatus = await ensureRepositoryUnarchived(targetOrg, targetRepoName);
+    core.info('Checking archive status...');
+    await ensureRepositoryUnarchived(targetOrg, targetRepoName);
   }
 
   // Disable GitHub Actions if requested
   if (disableActionsForRepo) {
-    console.log('Disabling GitHub Actions...');
+    core.info('Disabling GitHub Actions...');
     await disableActions(targetOrg, targetRepoName);
   }
 
   const originalCwd = process.cwd();
 
   try {
-    console.log(`Cloning ${cloneUrl}...`);
+    core.info(`Cloning ${cloneUrl}...`);
     execCommand(`git clone --mirror "${authenticatedCloneUrl}" "${repoDir}"`);
 
     process.chdir(repoDir);
@@ -456,14 +473,14 @@ async function mirrorRepository(repoConfig) {
     const authenticatedPushUrl = pushUrl.replace('://', `://x-access-token:${TARGET_GITHUB_TOKEN}@`);
 
     // Push refs selectively (exclude pull request refs)
-    console.log(`Pushing branches and tags to ${targetOrg}/${targetRepoName}...`);
+    core.info(`Pushing branches and tags to ${targetOrg}/${targetRepoName}...`);
 
     const forceFlag = FORCE_PUSH ? ' --force' : '';
 
     // Try to push branches
     try {
       execCommand(`git push${forceFlag} "${authenticatedPushUrl}" 'refs/heads/*:refs/heads/*'`);
-      console.log('✅ Branches pushed successfully');
+      core.info('✅ Branches pushed successfully');
     } catch (error) {
       const sanitizedError = sanitizeError(error);
       core.error('❌ Failed to push branches:', sanitizedError);
@@ -473,19 +490,19 @@ async function mirrorRepository(repoConfig) {
     // Try to push tags
     try {
       execCommand(`git push${forceFlag} "${authenticatedPushUrl}" 'refs/tags/*:refs/tags/*'`);
-      console.log('✅ Tags pushed successfully');
+      core.info('✅ Tags pushed successfully');
     } catch (error) {
       const sanitizedError = sanitizeError(error);
       core.error('❌ Failed to push tags:', sanitizedError);
       throw new Error(`Failed to push tags: ${sanitizedError}`);
     }
 
-    console.log(`✅ Successfully mirrored ${source} → ${target} (${visibility})`);
+    core.info(`✅ Successfully mirrored ${source} → ${target} (${visibility})`);
 
     // Archive repository if requested
     let archived = false;
     if (archiveAfterSync) {
-      console.log('Archiving repository...');
+      core.info('Archiving repository...');
       archived = await archiveRepository(targetOrg, targetRepoName);
     }
 
@@ -496,7 +513,6 @@ async function mirrorRepository(repoConfig) {
       visibilityUpdated: repoStatus.visibilityUpdated,
       archived: archived
     };
-
   } catch (error) {
     core.error(`❌ Failed to mirror ${source}: ${error.message}`);
     return {
@@ -507,7 +523,7 @@ async function mirrorRepository(repoConfig) {
   } finally {
     process.chdir(originalCwd);
     execCommand(`rm -rf "${tempDir}"`, { ignoreErrors: true });
-    console.log(`Cleaned up temp directory: ${tempDir}`);
+    core.info(`Cleaned up temp directory: ${tempDir}`);
   }
 }
 
