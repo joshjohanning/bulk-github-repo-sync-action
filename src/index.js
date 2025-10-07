@@ -130,7 +130,7 @@ function deriveInstanceUrl(apiUrl) {
     }
 
     // GitHub Enterprise Server case - remove /api/v3 or similar path
-    const instanceUrl = `${url.protocol}//${hostname}${url.port ? ':' + url.port : ''}`;
+    const instanceUrl = `${url.protocol}//${hostname}${url.port ? `:${url.port}` : ''}`;
     return instanceUrl;
   } catch (error) {
     core.warning(`Failed to parse API URL "${apiUrl}": ${error.message}`);
@@ -278,8 +278,10 @@ async function ensureRepository(
   description = '',
   overwriteVisibility = false
 ) {
-  let created = false;
-  let visibilityUpdated = false;
+  const status = {
+    created: false,
+    visibilityUpdated: false
+  };
 
   try {
     const { data: repo } = await targetOctokit.rest.repos.get({
@@ -301,10 +303,10 @@ async function ensureRepository(
           await targetOctokit.rest.repos.update({
             owner: targetOrg,
             repo: targetRepo,
-            visibility: visibility
+            visibility
           });
           core.info(`repo visibility updated to ${visibility}`);
-          visibilityUpdated = true;
+          status.visibilityUpdated = true;
         } catch (updateError) {
           core.warning(`Could not update repo visibility: ${updateError.message}`);
         }
@@ -313,7 +315,7 @@ async function ensureRepository(
       }
     }
 
-    return { created, visibilityUpdated };
+    return status;
   } catch (error) {
     if (error.status === 404) {
       core.info(`repo does not exist`);
@@ -324,13 +326,13 @@ async function ensureRepository(
           org: targetOrg,
           name: targetRepo,
           private: isPrivate,
-          visibility: visibility,
-          description: description
+          visibility,
+          description
         });
 
         core.info(`repo created (${visibility})`);
-        created = true;
-        return { created, visibilityUpdated };
+        status.created = true;
+        return status;
       } catch (createError) {
         core.error(`repo creation failed: ${createError.message}`);
         throw new Error(`Failed to create repository ${targetOrg}/${targetRepo}: ${createError.message}`);
@@ -379,10 +381,9 @@ async function ensureRepositoryUnarchived(targetOrg, targetRepo) {
       });
       core.info('📂 Repository unarchived');
       return { wasArchived: true };
-    } else {
-      core.info('📂 Repository is not archived');
-      return { wasArchived: false };
     }
+    core.info('📂 Repository is not archived');
+    return { wasArchived: false };
   } catch (error) {
     core.warning(`Could not check/unarchive repository: ${error.message}`);
     return { wasArchived: false };
@@ -511,7 +512,7 @@ async function mirrorRepository(repoConfig) {
       repo: `${targetOrg}/${targetRepoName}`,
       created: repoStatus.created,
       visibilityUpdated: repoStatus.visibilityUpdated,
-      archived: archived
+      archived
     };
   } catch (error) {
     core.error(`❌ Failed to mirror ${source}: ${error.message}`);
@@ -565,7 +566,7 @@ async function main() {
     const displayName = `${repo.source} → ${repo.target}`;
     try {
       const result = await githubGroup(displayName, async () => {
-        return await mirrorRepository(repo);
+        return mirrorRepository(repo);
       });
 
       if (result.success) {
@@ -598,16 +599,20 @@ async function main() {
 
   if (failedRepos.length > 0) {
     core.info('\n❌ Failed repositories:');
-    failedRepos.forEach(({ repo, error }) => {
+    for (const { repo, error } of failedRepos) {
       core.info(`  • ${repo}: ${error}`);
-    });
+    }
 
     process.exit(1);
   }
 }
 
 // Execute main function
-main().catch(error => {
-  core.error('Script failed:', error.message);
-  process.exit(1);
-});
+(async () => {
+  try {
+    await main();
+  } catch (error) {
+    core.error('Script failed:', error.message);
+    process.exit(1);
+  }
+})();
