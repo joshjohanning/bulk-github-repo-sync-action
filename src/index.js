@@ -60,7 +60,7 @@ import * as core from '@actions/core';
 import * as yaml from 'js-yaml';
 
 // Constants
-const CREDENTIAL_REGEX = /x-access-token:[^@]+@/g;
+const CREDENTIAL_REGEX = /x-access-token:[^@]{1,200}@/g;
 const CREDENTIAL_REPLACEMENT = 'x-access-token:***@';
 
 // Parse command line arguments
