@@ -4,6 +4,10 @@
 
 import { jest } from '@jest/globals';
 
+// Mock process.exit to prevent tests from exiting
+// eslint-disable-next-line no-unused-vars
+const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+
 // Mock @actions/core before importing index.js
 const mockCore = {
   getInput: jest.fn(() => ''),
@@ -12,9 +16,6 @@ const mockCore = {
   warning: jest.fn(),
   info: jest.fn()
 };
-
-// Mock process.exit to prevent tests from exiting
-const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
 
 jest.unstable_mockModule('@actions/core', () => mockCore);
 
