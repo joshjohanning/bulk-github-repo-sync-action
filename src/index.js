@@ -113,7 +113,7 @@ const argv = yargs(hideBin(process.argv))
  * @param {string} apiUrl - The API URL
  * @returns {string} The instance/server URL
  */
-function deriveInstanceUrl(apiUrl) {
+export function deriveInstanceUrl(apiUrl) {
   try {
     const url = new URL(apiUrl);
 
@@ -245,7 +245,7 @@ async function githubGroup(name, fn) {
 /**
  * Sanitize error messages to remove embedded credentials
  */
-function sanitizeError(error) {
+export function sanitizeError(error) {
   return error.message.replace(CREDENTIAL_REGEX, CREDENTIAL_REPLACEMENT);
 }
 
