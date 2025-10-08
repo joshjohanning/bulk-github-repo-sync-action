@@ -113,6 +113,3 @@ describe('Repository Sync Action - Integration Tests', () => {
     });
   });
 });
-
-
-
