@@ -5,7 +5,7 @@
  * Syncs GitHub repositories from source to target organizations using Octokit
  *
  * Usage:
- *   node sync.js [--file=repo_list_file] [--source-github-token=token] [--target-github-token=token] [options]
+ *   node index.js [--file=repo_list_file] [--source-github-token=token] [--target-github-token=token] [options]
  *
  * Command Line Options:
  *   --file, -f                     Repository list YAML file (default: actions-list.yml)
@@ -31,12 +31,12 @@
  *       archive-after-sync: true         # override default
  *
  * Examples:
- *   node sync.js --file=repos.yml
- *   node sync.js --source-github-token=ghp_xxx --target-github-token=ghp_yyy
- *   node sync.js --target-github-api-url=https://ghe.company.com/api/v3
- *   node sync.js --source-github-api-url=https://api.github.com --target-github-api-url=https://api.customersuccess.ghe.com
- *   node sync.js --overwrite-repo-visibility --file=repos.yml
- *   node sync.js --force-push --file=repos.yml
+ *   node index.js --file=repos.yml
+ *   node index.js --source-github-token=ghp_xxx --target-github-token=ghp_yyy
+ *   node index.js --target-github-api-url=https://ghe.company.com/api/v3
+ *   node index.js --source-github-api-url=https://api.github.com --target-github-api-url=https://api.customersuccess.ghe.com
+ *   node index.js --overwrite-repo-visibility --file=repos.yml
+ *   node index.js --force-push --file=repos.yml
  *
  * Environment Variables (fallback order):
  *   1. GitHub Actions inputs (INPUT_* variables) (highest priority)
@@ -60,7 +60,7 @@ import * as core from '@actions/core';
 import * as yaml from 'js-yaml';
 
 // Constants
-const CREDENTIAL_REGEX = /x-access-token:[^@]+@/g;
+const CREDENTIAL_REGEX = /x-access-token:[^@]{1,200}@/g;
 const CREDENTIAL_REPLACEMENT = 'x-access-token:***@';
 
 // Parse command line arguments
@@ -113,7 +113,7 @@ const argv = yargs(hideBin(process.argv))
  * @param {string} apiUrl - The API URL
  * @returns {string} The instance/server URL
  */
-function deriveInstanceUrl(apiUrl) {
+export function deriveInstanceUrl(apiUrl) {
   try {
     const url = new URL(apiUrl);
 
@@ -245,7 +245,7 @@ async function githubGroup(name, fn) {
 /**
  * Sanitize error messages to remove embedded credentials
  */
-function sanitizeError(error) {
+export function sanitizeError(error) {
   return error.message.replace(CREDENTIAL_REGEX, CREDENTIAL_REPLACEMENT);
 }
 

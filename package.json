@@ -5,7 +5,7 @@
   "type": "module",
   "author": {
     "name": "Josh Johanning",
-    "email": "joshjohanning@ithub.com",
+    "email": "joshjohanning@github.com",
     "url": "https://github.com/joshjohanning"
   },
   "private": true,
@@ -31,22 +31,20 @@
   },
   "scripts": {
     "bundle": "npm run format:write && npm run package",
-    "ci-test": "npx jest",
+    "ci-test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "coverage": "npx make-coverage-badge --output-path ./badges/coverage.svg",
     "format:write": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "lint": "npx eslint .",
     "package": "npx ncc build src/index.js -o dist --source-map --license licenses.txt",
     "package:watch": "npm run package -- --watch",
-    "test": "npx jest",
-    "all": "npm run format:write && npm run lint && npm run test && npm run coverage && npm run package"
-  },
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "all": "npm run format:write && npm run lint && npm run ci-test && npm run coverage && npm run package"  },
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.10.1",
     "@octokit/rest": "^22.0.0",
     "js-yaml": "^4.1.0",
-    "json2md": "^2.0.1",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
