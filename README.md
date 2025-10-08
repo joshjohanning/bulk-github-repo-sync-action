@@ -1,5 +1,9 @@
 # bulk-github-repo-sync-action
 
+[![CI](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/ci.yml/badge.svg)](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/ci.yml)
+[![Publish GitHub Action](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/publish.yml/badge.svg)](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/publish.yml)
+![Coverage](./badges/coverage.svg)
+
 🔄 Sync GitHub repositories from source to target organizations using mirror cloning. Creates target repositories if they don't exist, with support for visibility control, Actions disabling, and archiving.
 
 ## Features
