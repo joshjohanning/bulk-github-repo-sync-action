@@ -280,7 +280,8 @@ async function ensureRepository(
 ) {
   const status = {
     created: false,
-    visibilityUpdated: false
+    visibilityUpdated: false,
+    descriptionUpdated: false
   };
 
   try {
@@ -291,6 +292,9 @@ async function ensureRepository(
 
     core.info('repo exists');
 
+    const updates = {};
+    let needsUpdate = false;
+
     // Check if we need to update visibility
     if (overwriteVisibility) {
       const currentVisibility = repo.visibility;
@@ -299,19 +303,38 @@ async function ensureRepository(
 
       if (currentVisibility !== visibility) {
         core.info(`Updating visibility from ${currentVisibility} to ${visibility}`);
-        try {
-          await targetOctokit.rest.repos.update({
-            owner: targetOrg,
-            repo: targetRepo,
-            visibility
-          });
-          core.info(`repo visibility updated to ${visibility}`);
-          status.visibilityUpdated = true;
-        } catch (updateError) {
-          core.warning(`Could not update repo visibility: ${updateError.message}`);
-        }
+        updates.visibility = visibility;
+        status.visibilityUpdated = true;
+        needsUpdate = true;
       } else {
         core.info(`Visibility already matches (${currentVisibility})`);
+      }
+    }
+
+    // Check if we need to update description
+    const currentDescription = repo.description || '';
+    const targetDescription = description || '';
+
+    if (currentDescription !== targetDescription) {
+      core.info(`Description differs - updating from "${currentDescription}" to "${targetDescription}"`);
+      updates.description = targetDescription;
+      status.descriptionUpdated = true;
+      needsUpdate = true;
+    } else {
+      core.info(`Description already matches`);
+    }
+
+    // Apply updates if needed
+    if (needsUpdate) {
+      try {
+        await targetOctokit.rest.repos.update({
+          owner: targetOrg,
+          repo: targetRepo,
+          ...updates
+        });
+        core.info(`Repository updated successfully`);
+      } catch (updateError) {
+        core.warning(`Could not update repository: ${updateError.message}`);
       }
     }
 
@@ -512,6 +535,7 @@ async function mirrorRepository(repoConfig) {
       repo: `${targetOrg}/${targetRepoName}`,
       created: repoStatus.created,
       visibilityUpdated: repoStatus.visibilityUpdated,
+      descriptionUpdated: repoStatus.descriptionUpdated,
       archived
     };
   } catch (error) {
@@ -558,6 +582,7 @@ async function main() {
   let created = 0;
   let updated = 0;
   let visibilityUpdated = 0;
+  let descriptionUpdated = 0;
   let archived = 0;
   const failedRepos = [];
 
@@ -574,6 +599,7 @@ async function main() {
         if (result.created) created++;
         else updated++;
         if (result.visibilityUpdated) visibilityUpdated++;
+        if (result.descriptionUpdated) descriptionUpdated++;
         if (result.archived) archived++;
       } else {
         failed++;
@@ -595,7 +621,8 @@ async function main() {
   if (OVERWRITE_VISIBILITY) {
     core.info(`👁️  Visibility updated: ${visibilityUpdated}`);
   }
-  core.info(`📦 Archived: ${archived}`);
+  core.info(`� Description updated: ${descriptionUpdated}`);
+  core.info(`�📦 Archived: ${archived}`);
 
   if (failedRepos.length > 0) {
     core.info('\n❌ Failed repositories:');

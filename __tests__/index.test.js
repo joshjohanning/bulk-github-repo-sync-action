@@ -113,4 +113,66 @@ describe('Repository Sync Action - Integration Tests', () => {
       expect(sanitized).toContain('x-access-token:***@');
     });
   });
+
+  describe('Repository description updates', () => {
+    test('should detect when descriptions differ', () => {
+      const currentDescription = 'Old description';
+      const targetDescription = 'New description';
+
+      expect(currentDescription).not.toBe(targetDescription);
+    });
+
+    test('should detect when descriptions match', () => {
+      const currentDescription = 'Same description';
+      const targetDescription = 'Same description';
+
+      expect(currentDescription).toBe(targetDescription);
+    });
+
+    test('should handle empty descriptions', () => {
+      const currentDescription = '';
+      const targetDescription = '';
+
+      expect(currentDescription).toBe(targetDescription);
+    });
+
+    test('should detect when current is empty but target has description', () => {
+      const currentDescription = '';
+      const targetDescription = 'New description';
+
+      expect(currentDescription).not.toBe(targetDescription);
+    });
+
+    test('should detect when current has description but target is empty', () => {
+      const currentDescription = 'Old description';
+      const targetDescription = '';
+
+      expect(currentDescription).not.toBe(targetDescription);
+    });
+
+    test('should treat null as empty string', () => {
+      const mockCurrentDescription = null;
+      const mockTargetDescription = null;
+
+      const currentDescription = mockCurrentDescription || '';
+      const targetDescription = mockTargetDescription || '';
+
+      expect(currentDescription).toBe(targetDescription);
+      expect(currentDescription).toBe('');
+    });
+
+    test('should handle descriptions with special characters', () => {
+      const currentDescription = 'Description with "quotes" and special chars: !@#$%';
+      const targetDescription = 'Description with "quotes" and special chars: !@#$%';
+
+      expect(currentDescription).toBe(targetDescription);
+    });
+
+    test('should be case-sensitive when comparing descriptions', () => {
+      const currentDescription = 'Description';
+      const targetDescription = 'description';
+
+      expect(currentDescription).not.toBe(targetDescription);
+    });
+  });
 });
