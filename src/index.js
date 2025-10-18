@@ -106,7 +106,10 @@ const argv = yargs(hideBin(process.argv))
     'Use different tokens for source and target'
   )
   .example('$0 --overwrite-repo-visibility --file=repos.yml', 'Update visibility of existing repos')
-  .example('$0 --force-push --file=repos.yml', 'Force push to overwrite target repository history').argv;
+  .example('$0 --force-push --file=repos.yml', 'Force push to overwrite target repository history')
+  .wrap(null)
+  .version()
+  .parse();
 
 /**
  * Derive instance/server URL from API URL
