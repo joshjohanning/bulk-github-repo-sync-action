@@ -49,16 +49,16 @@
     "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.1",
+    "@vercel/ncc": "^0.38.4",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-github": "^6.0.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jest": "^29.0.1",
-    "eslint-plugin-prettier": "^5.0.1",
+    "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.5.0",
     "jest": "^30.2.0",
     "make-coverage-badge": "^1.2.0",
-    "prettier": "^3.0.0"
+    "prettier": "^3.6.2"
   }
 }
