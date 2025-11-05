@@ -624,8 +624,8 @@ async function main() {
   if (OVERWRITE_VISIBILITY) {
     core.info(`👁️  Visibility updated: ${visibilityUpdated}`);
   }
-  core.info(`� Description updated: ${descriptionUpdated}`);
-  core.info(`�📦 Archived: ${archived}`);
+  core.info(`📝 Description updated: ${descriptionUpdated}`);
+  core.info(`📦 Archived: ${archived}`);
 
   if (failedRepos.length > 0) {
     core.info('\n❌ Failed repositories:');
