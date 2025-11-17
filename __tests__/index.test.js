@@ -389,7 +389,7 @@ describe('Repository Sync Action - Integration Tests', () => {
     });
 
     test('should handle undefined as false', () => {
-      const value = undefined;
+      const value = /** @type {string | undefined} */ (undefined);
       expect(value === 'true').toBe(false);
     });
   });
