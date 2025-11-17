@@ -483,14 +483,12 @@ describe('Repository Operations with Mocked APIs', () => {
       error.status = 404;
       mockOctokit.rest.repos.get.mockRejectedValue(error);
 
-      try {
-        await mockOctokit.rest.repos.get({
+      await expect(
+        mockOctokit.rest.repos.get({
           owner: 'test-org',
           repo: 'nonexistent-repo'
-        });
-      } catch (err) {
-        expect(err.status).toBe(404);
-      }
+        })
+      ).rejects.toThrow('Not Found');
 
       expect(mockOctokit.rest.repos.get).toHaveBeenCalled();
     });
@@ -579,19 +577,15 @@ describe('Repository Operations with Mocked APIs', () => {
     });
 
     test('should handle error when disabling Actions', async () => {
-      mockOctokit.rest.actions.setGithubActionsPermissionsRepository.mockRejectedValue(
-        new Error('Permission denied')
-      );
+      mockOctokit.rest.actions.setGithubActionsPermissionsRepository.mockRejectedValue(new Error('Permission denied'));
 
-      try {
-        await mockOctokit.rest.actions.setGithubActionsPermissionsRepository({
+      await expect(
+        mockOctokit.rest.actions.setGithubActionsPermissionsRepository({
           owner: 'test-org',
           repo: 'test-repo',
           enabled: false
-        });
-      } catch (error) {
-        expect(error.message).toBe('Permission denied');
-      }
+        })
+      ).rejects.toThrow('Permission denied');
     });
   });
 
