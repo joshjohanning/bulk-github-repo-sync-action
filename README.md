@@ -2,7 +2,7 @@
 
 [![GitHub release](https://img.shields.io/github/release/joshjohanning/bulk-github-repo-sync-action.svg?logo=github&labelColor=333)](https://github.com/joshjohanning/bulk-github-repo-sync-action/releases)
 [![Immutable Releases](https://img.shields.io/badge/releases-immutable-blue?labelColor=333)](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases)
-[![GitHub marketplace](https://img.shields.io/badge/marketplace-Bulk%20GitHub%20Repo%20Sync%20Action-blue?logo=github&labelColor=333)](https://github.com/marketplace/actions/bulk-github-repo-sync-action)
+[![GitHub marketplace](https://img.shields.io/badge/marketplace-Bulk%20GitHub%20Repo%20Sync%20Action-blue?logo=github&labelColor=333)](https://github.com/marketplace/actions/bulk-github-repository-sync)
 [![CI](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/ci.yml/badge.svg)](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/ci.yml)
 [![Publish GitHub Action](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/publish.yml/badge.svg)](https://github.com/joshjohanning/bulk-github-repo-sync-action/actions/workflows/publish.yml)
 ![Coverage](./badges/coverage.svg)
