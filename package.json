@@ -1,7 +1,7 @@
 {
   "name": "bulk-github-repo-sync-action",
   "description": "🔄 Sync GitHub repositories between organizations with visibility control, Actions management, and archiving",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "type": "module",
   "author": {
     "name": "Josh Johanning",
@@ -42,6 +42,9 @@
     "all": "npm run format:write && npm run lint && npm run ci-test && npm run coverage && npm run package"
   },
   "license": "MIT",
+  "overrides": {
+    "js-yaml@3": "3.14.2"
+  },
   "dependencies": {
     "@actions/core": "^2.0.1",
     "@octokit/rest": "^22.0.1",
