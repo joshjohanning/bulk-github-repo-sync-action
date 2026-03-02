@@ -63,8 +63,8 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
 > [!NOTE]
 > **Required GitHub App Permissions:**
 >
-> - **Source App**: Repository **Read** access to `contents` and `metadata`
-> - **Target App**: Repository **Read and Write** access to `actions`, `administration`, `contents`, and `metadata`
+> - **Source App**: Repository **Read** access to `contents`
+> - **Target App**: Repository **Read and Write** access to `administration`, `contents`, and `workflows`
 
 ```yml
 - uses: actions/checkout@v5
