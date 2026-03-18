@@ -9,6 +9,10 @@
 
 🔄 Sync GitHub repositories from source to target organizations using mirror cloning. Creates target repositories if they don't exist, with support for visibility control, Actions disabling, and archiving.
 
+## What's new
+
+Please refer to the [release page](https://github.com/joshjohanning/bulk-github-repo-sync-action/releases) for the latest release notes.
+
 ## Features
 
 - 🔄 **Mirror cloning** - Complete repository sync including all branches and tags
@@ -25,9 +29,9 @@
 > This example uses personal access tokens for simplicity. See the [GitHub Apps section](#usage-with-github-apps-recommended) below for the recommended approach using GitHub Apps.
 
 ```yml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
 - name: Bulk GitHub Repository Sync
-  uses: joshjohanning/bulk-github-repo-sync-action@v1
+  uses: joshjohanning/bulk-github-repo-sync-action@v2
   with:
     repo-list-file: repos.yml
     source-github-token: ${{ secrets.SOURCE_GITHUB_TOKEN }}
@@ -67,23 +71,23 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
 > - **Target App**: Repository **Read and Write** access to `administration`, `contents`, and `workflows`
 
 ```yml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
 # source
-- uses: actions/create-github-app-token@v2
+- uses: actions/create-github-app-token@v3
   id: source-app-token
   with:
     app-id: ${{ vars.SOURCE_APP_ID }}
     private-key: ${{ secrets.SOURCE_APP_PRIVATE_KEY }}
     owner: ${{ github.repository_owner }}
 # target
-- uses: actions/create-github-app-token@v2
+- uses: actions/create-github-app-token@v3
   id: target-app-token
   with:
     app-id: ${{ vars.TARGET_APP_ID }}
     private-key: ${{ secrets.TARGET_APP_PRIVATE_KEY }}
     owner: joshjohanning-emu
 - name: Bulk GitHub Repository Sync
-  uses: joshjohanning/bulk-github-repo-sync-action@v1
+  uses: joshjohanning/bulk-github-repo-sync-action@v2
   with:
     repo-list-file: repos.yml
     source-github-token: ${{ steps.source-app-token.outputs.token }}
