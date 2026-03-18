@@ -9,6 +9,10 @@
 
 🔄 Sync GitHub repositories from source to target organizations using mirror cloning. Creates target repositories if they don't exist, with support for visibility control, Actions disabling, and archiving.
 
+## What's new
+
+Please refer to the [release page](https://github.com/joshjohanning/bulk-github-repo-sync-action/releases) for the latest release notes.
+
 ## Features
 
 - 🔄 **Mirror cloning** - Complete repository sync including all branches and tags
@@ -27,7 +31,7 @@
 ```yml
 - uses: actions/checkout@v5
 - name: Bulk GitHub Repository Sync
-  uses: joshjohanning/bulk-github-repo-sync-action@v1
+  uses: joshjohanning/bulk-github-repo-sync-action@v2
   with:
     repo-list-file: repos.yml
     source-github-token: ${{ secrets.SOURCE_GITHUB_TOKEN }}
@@ -83,7 +87,7 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
     private-key: ${{ secrets.TARGET_APP_PRIVATE_KEY }}
     owner: joshjohanning-emu
 - name: Bulk GitHub Repository Sync
-  uses: joshjohanning/bulk-github-repo-sync-action@v1
+  uses: joshjohanning/bulk-github-repo-sync-action@v2
   with:
     repo-list-file: repos.yml
     source-github-token: ${{ steps.source-app-token.outputs.token }}
