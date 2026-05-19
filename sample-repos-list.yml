@@ -4,5 +4,6 @@ repos:
     visibility: private # visibility defaults to private if not specified
     disable-github-actions: true # defaults to TRUE if not specified
     archive-after-sync: true # defaults to FALSE if not specified
+    sync-repo-description: true # defaults to TRUE if not specified
   - source: joshjohanning-org/test-repo-updates
     target: joshjohanning-emu/test-repo-updates

@@ -108,6 +108,7 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
 | `visibility`             | Repository visibility (private/public/internal) | `private` |
 | `disable-github-actions` | Disable GitHub Actions on target repository     | `true`    |
 | `archive-after-sync`     | Archive repository after successful sync        | `false`   |
+| `sync-repo-description`  | Sync repo description from source on every run  | `true`    |
 
 ### Action Inputs
 

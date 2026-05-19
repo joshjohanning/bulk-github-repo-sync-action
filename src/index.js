@@ -24,11 +24,13 @@
  *       visibility: private              # private, public, or internal (defaults to private)
  *       disable-github-actions: true     # defaults to true
  *       archive-after-sync: false        # defaults to false
+ *       sync-repo-description: true      # defaults to true
  *     - source: org1/repo2
  *       target: org2/repo2
  *       visibility: public
  *       disable-github-actions: false    # override default
  *       archive-after-sync: true         # override default
+ *       sync-repo-description: false     # override default
  *
  * Examples:
  *   node index.js --file=repos.yml
@@ -279,7 +281,8 @@ async function ensureRepository(
   targetRepo,
   visibility = 'private',
   description = '',
-  overwriteVisibility = false
+  overwriteVisibility = false,
+  syncDescription = true
 ) {
   const status = {
     created: false,
@@ -315,16 +318,20 @@ async function ensureRepository(
     }
 
     // Check if we need to update description
-    const currentDescription = repo.description || '';
-    const targetDescription = description || '';
+    if (syncDescription) {
+      const currentDescription = repo.description || '';
+      const targetDescription = description || '';
 
-    if (currentDescription !== targetDescription) {
-      core.info(`Description differs - updating from "${currentDescription}" to "${targetDescription}"`);
-      updates.description = targetDescription;
-      status.descriptionUpdated = true;
-      needsUpdate = true;
+      if (currentDescription !== targetDescription) {
+        core.info(`Description differs - updating from "${currentDescription}" to "${targetDescription}"`);
+        updates.description = targetDescription;
+        status.descriptionUpdated = true;
+        needsUpdate = true;
+      } else {
+        core.info(`Description already matches`);
+      }
     } else {
-      core.info(`Description already matches`);
+      core.info(`Skipping description sync (sync-repo-description=false)`);
     }
 
     // Apply updates if needed
@@ -443,7 +450,8 @@ async function mirrorRepository(repoConfig) {
     target,
     visibility = 'private',
     'disable-github-actions': disableActionsForRepo = true, // default to true
-    'archive-after-sync': archiveAfterSync = false // default to false
+    'archive-after-sync': archiveAfterSync = false, // default to false
+    'sync-repo-description': syncRepoDescription = true // default to true
   } = repoConfig;
   const [sourceOrg, sourceRepoName] = source.split('/');
   const [targetOrg, targetRepoName] = target.split('/');
@@ -461,21 +469,32 @@ async function mirrorRepository(repoConfig) {
   core.info(`Processing: ${source} → ${target} (${visibility})`);
   core.info(`Using temp directory: ${tempDir}`);
 
-  // Fetch source repository description
+  // Fetch source repository description (only if we plan to sync it)
   let description = '';
-  try {
-    const { data: sourceRepo } = await sourceOctokit.rest.repos.get({
-      owner: sourceOrg,
-      repo: sourceRepoName
-    });
-    description = sourceRepo.description || '';
-    core.info(`Source repo description: ${description || '(no description)'}`);
-  } catch (error) {
-    core.warning(`Could not fetch source repo description: ${error.message}`);
+  if (syncRepoDescription) {
+    try {
+      const { data: sourceRepo } = await sourceOctokit.rest.repos.get({
+        owner: sourceOrg,
+        repo: sourceRepoName
+      });
+      description = sourceRepo.description || '';
+      core.info(`Source repo description: ${description || '(no description)'}`);
+    } catch (error) {
+      core.warning(`Could not fetch source repo description: ${error.message}`);
+    }
+  } else {
+    core.info('Skipping source description fetch (sync-repo-description=false)');
   }
 
   // Ensure target repository exists
-  const repoStatus = await ensureRepository(targetOrg, targetRepoName, visibility, description, OVERWRITE_VISIBILITY);
+  const repoStatus = await ensureRepository(
+    targetOrg,
+    targetRepoName,
+    visibility,
+    description,
+    OVERWRITE_VISIBILITY,
+    syncRepoDescription
+  );
 
   // Ensure repository is unarchived for sync (if archive option is enabled)
   if (archiveAfterSync) {

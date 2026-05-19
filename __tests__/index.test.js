@@ -267,6 +267,24 @@ describe('Repository Sync Action - Integration Tests', () => {
 
       expect(currentDescription).not.toBe(targetDescription);
     });
+
+    test('should default sync-repo-description to true when not specified', () => {
+      const repoConfig = { source: 'a/b', target: 'c/d' };
+      const { 'sync-repo-description': syncRepoDescription = true } = repoConfig;
+      expect(syncRepoDescription).toBe(true);
+    });
+
+    test('should respect sync-repo-description=false override', () => {
+      const repoConfig = { source: 'a/b', target: 'c/d', 'sync-repo-description': false };
+      const { 'sync-repo-description': syncRepoDescription = true } = repoConfig;
+      expect(syncRepoDescription).toBe(false);
+    });
+
+    test('should respect explicit sync-repo-description=true', () => {
+      const repoConfig = { source: 'a/b', target: 'c/d', 'sync-repo-description': true };
+      const { 'sync-repo-description': syncRepoDescription = true } = repoConfig;
+      expect(syncRepoDescription).toBe(true);
+    });
   });
 
   describe('Credential pattern matching', () => {
