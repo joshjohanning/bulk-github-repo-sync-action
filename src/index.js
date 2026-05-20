@@ -24,11 +24,13 @@
  *       visibility: private              # private, public, or internal (defaults to private)
  *       disable-github-actions: true     # defaults to true
  *       archive-after-sync: false        # defaults to false
+ *       sync-repo-description: true      # defaults to true
  *     - source: org1/repo2
  *       target: org2/repo2
  *       visibility: public
  *       disable-github-actions: false    # override default
  *       archive-after-sync: true         # override default
+ *       sync-repo-description: false     # override default
  *
  * Examples:
  *   node index.js --file=repos.yml
@@ -272,14 +274,24 @@ function execCommand(command, options = {}) {
 }
 
 /**
- * Check if repository exists, create if it doesn't
+ * Check if repository exists, create if it doesn't, and optionally update
+ * visibility/description on the existing target.
+ * @param {string} targetOrg - Target organization (owner) login.
+ * @param {string} targetRepo - Target repository name.
+ * @param {('private'|'public'|'internal')} [visibility='private'] - Desired visibility for create/update.
+ * @param {string} [description=''] - Desired repository description.
+ * @param {boolean} [overwriteVisibility=false] - When true, update visibility on existing repos to match.
+ * @param {boolean} [syncDescription=true] - When true, update description on existing repos to match.
+ * @returns {Promise<{created: boolean, visibilityUpdated: boolean, descriptionUpdated: boolean}>}
+ *   Flags describing what changed on the target repository.
  */
-async function ensureRepository(
+export async function ensureRepository(
   targetOrg,
   targetRepo,
   visibility = 'private',
   description = '',
-  overwriteVisibility = false
+  overwriteVisibility = false,
+  syncDescription = true
 ) {
   const status = {
     created: false,
@@ -315,16 +327,20 @@ async function ensureRepository(
     }
 
     // Check if we need to update description
-    const currentDescription = repo.description || '';
-    const targetDescription = description || '';
+    if (syncDescription) {
+      const currentDescription = repo.description || '';
+      const targetDescription = description || '';
 
-    if (currentDescription !== targetDescription) {
-      core.info(`Description differs - updating from "${currentDescription}" to "${targetDescription}"`);
-      updates.description = targetDescription;
-      status.descriptionUpdated = true;
-      needsUpdate = true;
+      if (currentDescription !== targetDescription) {
+        core.info(`Description differs - updating from "${currentDescription}" to "${targetDescription}"`);
+        updates.description = targetDescription;
+        status.descriptionUpdated = true;
+        needsUpdate = true;
+      } else {
+        core.info(`Description already matches`);
+      }
     } else {
-      core.info(`Description already matches`);
+      core.info(`Skipping description sync (sync-repo-description=false)`);
     }
 
     // Apply updates if needed
@@ -435,15 +451,34 @@ async function archiveRepository(targetOrg, targetRepo) {
 }
 
 /**
- * Mirror repository from source to target
+ * Mirror a single repository from source to target: ensure the target exists,
+ * optionally disable Actions / unarchive, push refs, then optionally re-archive.
+ * @param {Object} repoConfig - Per-repository config entry from the YAML file.
+ * @param {string} repoConfig.source - Source repo in `owner/repo` form.
+ * @param {string} repoConfig.target - Target repo in `owner/repo` form.
+ * @param {('private'|'public'|'internal')} [repoConfig.visibility='private'] - Target visibility.
+ * @param {boolean} [repoConfig.disable-github-actions=true] - Disable Actions on target after creation/sync.
+ * @param {boolean} [repoConfig.archive-after-sync=false] - Archive the target after a successful sync.
+ * @param {boolean} [repoConfig.sync-repo-description=true] - Sync the source repo's description to the target.
+ *   When false, the source description is not fetched and the target description is left untouched.
+ * @returns {Promise<{
+ *   success: boolean,
+ *   repo: string,
+ *   created?: boolean,
+ *   visibilityUpdated?: boolean,
+ *   descriptionUpdated?: boolean,
+ *   archived?: boolean,
+ *   error?: string
+ * }>} Outcome of the mirror operation.
  */
-async function mirrorRepository(repoConfig) {
+export async function mirrorRepository(repoConfig) {
   const {
     source,
     target,
     visibility = 'private',
     'disable-github-actions': disableActionsForRepo = true, // default to true
-    'archive-after-sync': archiveAfterSync = false // default to false
+    'archive-after-sync': archiveAfterSync = false, // default to false
+    'sync-repo-description': syncRepoDescription = true // default to true
   } = repoConfig;
   const [sourceOrg, sourceRepoName] = source.split('/');
   const [targetOrg, targetRepoName] = target.split('/');
@@ -461,21 +496,32 @@ async function mirrorRepository(repoConfig) {
   core.info(`Processing: ${source} → ${target} (${visibility})`);
   core.info(`Using temp directory: ${tempDir}`);
 
-  // Fetch source repository description
+  // Fetch source repository description (only if we plan to sync it)
   let description = '';
-  try {
-    const { data: sourceRepo } = await sourceOctokit.rest.repos.get({
-      owner: sourceOrg,
-      repo: sourceRepoName
-    });
-    description = sourceRepo.description || '';
-    core.info(`Source repo description: ${description || '(no description)'}`);
-  } catch (error) {
-    core.warning(`Could not fetch source repo description: ${error.message}`);
+  if (syncRepoDescription) {
+    try {
+      const { data: sourceRepo } = await sourceOctokit.rest.repos.get({
+        owner: sourceOrg,
+        repo: sourceRepoName
+      });
+      description = sourceRepo.description || '';
+      core.info(`Source repo description: ${description || '(no description)'}`);
+    } catch (error) {
+      core.warning(`Could not fetch source repo description: ${error.message}`);
+    }
+  } else {
+    core.info('Skipping source description fetch (sync-repo-description=false)');
   }
 
   // Ensure target repository exists
-  const repoStatus = await ensureRepository(targetOrg, targetRepoName, visibility, description, OVERWRITE_VISIBILITY);
+  const repoStatus = await ensureRepository(
+    targetOrg,
+    targetRepoName,
+    visibility,
+    description,
+    OVERWRITE_VISIBILITY,
+    syncRepoDescription
+  );
 
   // Ensure repository is unarchived for sync (if archive option is enabled)
   if (archiveAfterSync) {
