@@ -274,7 +274,16 @@ function execCommand(command, options = {}) {
 }
 
 /**
- * Check if repository exists, create if it doesn't
+ * Check if repository exists, create if it doesn't, and optionally update
+ * visibility/description on the existing target.
+ * @param {string} targetOrg - Target organization (owner) login.
+ * @param {string} targetRepo - Target repository name.
+ * @param {('private'|'public'|'internal')} [visibility='private'] - Desired visibility for create/update.
+ * @param {string} [description=''] - Desired repository description.
+ * @param {boolean} [overwriteVisibility=false] - When true, update visibility on existing repos to match.
+ * @param {boolean} [syncDescription=true] - When true, update description on existing repos to match.
+ * @returns {Promise<{created: boolean, visibilityUpdated: boolean, descriptionUpdated: boolean}>}
+ *   Flags describing what changed on the target repository.
  */
 export async function ensureRepository(
   targetOrg,
@@ -442,7 +451,25 @@ async function archiveRepository(targetOrg, targetRepo) {
 }
 
 /**
- * Mirror repository from source to target
+ * Mirror a single repository from source to target: ensure the target exists,
+ * optionally disable Actions / unarchive, push refs, then optionally re-archive.
+ * @param {Object} repoConfig - Per-repository config entry from the YAML file.
+ * @param {string} repoConfig.source - Source repo in `owner/repo` form.
+ * @param {string} repoConfig.target - Target repo in `owner/repo` form.
+ * @param {('private'|'public'|'internal')} [repoConfig.visibility='private'] - Target visibility.
+ * @param {boolean} [repoConfig.disable-github-actions=true] - Disable Actions on target after creation/sync.
+ * @param {boolean} [repoConfig.archive-after-sync=false] - Archive the target after a successful sync.
+ * @param {boolean} [repoConfig.sync-repo-description=true] - Sync the source repo's description to the target.
+ *   When false, the source description is not fetched and the target description is left untouched.
+ * @returns {Promise<{
+ *   success: boolean,
+ *   repo: string,
+ *   created?: boolean,
+ *   visibilityUpdated?: boolean,
+ *   descriptionUpdated?: boolean,
+ *   archived?: boolean,
+ *   error?: string
+ * }>} Outcome of the mirror operation.
  */
 export async function mirrorRepository(repoConfig) {
   const {
