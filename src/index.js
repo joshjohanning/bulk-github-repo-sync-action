@@ -276,7 +276,7 @@ function execCommand(command, options = {}) {
 /**
  * Check if repository exists, create if it doesn't
  */
-async function ensureRepository(
+export async function ensureRepository(
   targetOrg,
   targetRepo,
   visibility = 'private',
@@ -444,7 +444,7 @@ async function archiveRepository(targetOrg, targetRepo) {
 /**
  * Mirror repository from source to target
  */
-async function mirrorRepository(repoConfig) {
+export async function mirrorRepository(repoConfig) {
   const {
     source,
     target,

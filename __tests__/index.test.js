@@ -113,7 +113,7 @@ const mockYaml = {
 jest.unstable_mockModule('js-yaml', () => mockYaml);
 
 // Import functions after mocking
-const { deriveInstanceUrl, sanitizeError } = await import('../src/index.js');
+const { deriveInstanceUrl, sanitizeError, ensureRepository, mirrorRepository } = await import('../src/index.js');
 
 describe('Repository Sync Action - Helper Functions', () => {
   beforeEach(() => {
@@ -266,24 +266,6 @@ describe('Repository Sync Action - Integration Tests', () => {
       const targetDescription = 'description';
 
       expect(currentDescription).not.toBe(targetDescription);
-    });
-
-    test('should default sync-repo-description to true when not specified', () => {
-      const repoConfig = { source: 'a/b', target: 'c/d' };
-      const { 'sync-repo-description': syncRepoDescription = true } = repoConfig;
-      expect(syncRepoDescription).toBe(true);
-    });
-
-    test('should respect sync-repo-description=false override', () => {
-      const repoConfig = { source: 'a/b', target: 'c/d', 'sync-repo-description': false };
-      const { 'sync-repo-description': syncRepoDescription = true } = repoConfig;
-      expect(syncRepoDescription).toBe(false);
-    });
-
-    test('should respect explicit sync-repo-description=true', () => {
-      const repoConfig = { source: 'a/b', target: 'c/d', 'sync-repo-description': true };
-      const { 'sync-repo-description': syncRepoDescription = true } = repoConfig;
-      expect(syncRepoDescription).toBe(true);
     });
   });
 
@@ -818,6 +800,117 @@ repos:
       mockCore.setFailed('Fatal error occurred');
 
       expect(mockCore.setFailed).toHaveBeenCalledWith('Fatal error occurred');
+    });
+  });
+});
+
+describe('sync-repo-description option', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockExecSync.mockReturnValue('');
+  });
+
+  describe('ensureRepository', () => {
+    test('updates target description when syncDescription=true and descriptions differ', async () => {
+      mockOctokit.rest.repos.get.mockResolvedValue({
+        data: { visibility: 'private', description: 'old', archived: false }
+      });
+      mockOctokit.rest.repos.update.mockResolvedValue({ data: {} });
+
+      const status = await ensureRepository('org', 'repo', 'private', 'new', false, true);
+
+      expect(mockOctokit.rest.repos.update).toHaveBeenCalledWith(
+        expect.objectContaining({ owner: 'org', repo: 'repo', description: 'new' })
+      );
+      expect(status.descriptionUpdated).toBe(true);
+    });
+
+    test('does NOT update target description when syncDescription=false, even if differs', async () => {
+      mockOctokit.rest.repos.get.mockResolvedValue({
+        data: { visibility: 'private', description: 'old', archived: false }
+      });
+
+      const status = await ensureRepository('org', 'repo', 'private', 'new', false, false);
+
+      expect(mockOctokit.rest.repos.update).not.toHaveBeenCalled();
+      expect(status.descriptionUpdated).toBe(false);
+    });
+
+    test('does not call update when syncDescription=true and descriptions already match', async () => {
+      mockOctokit.rest.repos.get.mockResolvedValue({
+        data: { visibility: 'private', description: 'same', archived: false }
+      });
+
+      const status = await ensureRepository('org', 'repo', 'private', 'same', false, true);
+
+      expect(mockOctokit.rest.repos.update).not.toHaveBeenCalled();
+      expect(status.descriptionUpdated).toBe(false);
+    });
+
+    test('passes description to createInOrg when repo does not exist', async () => {
+      const notFound = new Error('Not Found');
+      notFound.status = 404;
+      mockOctokit.rest.repos.get.mockRejectedValue(notFound);
+      mockOctokit.rest.repos.createInOrg.mockResolvedValue({ data: {} });
+
+      const status = await ensureRepository('org', 'new-repo', 'private', 'fresh', false, true);
+
+      expect(mockOctokit.rest.repos.createInOrg).toHaveBeenCalledWith(
+        expect.objectContaining({ description: 'fresh' })
+      );
+      expect(status.created).toBe(true);
+    });
+  });
+
+  describe('mirrorRepository', () => {
+    const originalChdir = process.chdir;
+
+    beforeAll(() => {
+      // Prevent real cwd changes during tests
+      process.chdir = jest.fn();
+    });
+
+    afterAll(() => {
+      process.chdir = originalChdir;
+    });
+
+    test('fetches source description and passes it through when sync-repo-description is default (true)', async () => {
+      mockOctokit.rest.repos.get
+        .mockResolvedValueOnce({ data: { description: 'from source' } }) // source fetch
+        .mockResolvedValueOnce({ data: { visibility: 'private', description: 'old', archived: false } }); // target fetch
+      mockOctokit.rest.repos.update.mockResolvedValue({ data: {} });
+
+      const result = await mirrorRepository({ source: 'src/repo', target: 'tgt/repo' });
+
+      // source fetch happened
+      expect(mockOctokit.rest.repos.get).toHaveBeenCalledWith({ owner: 'src', repo: 'repo' });
+      // target description updated to source's
+      expect(mockOctokit.rest.repos.update).toHaveBeenCalledWith(
+        expect.objectContaining({ owner: 'tgt', repo: 'repo', description: 'from source' })
+      );
+      expect(result.success).toBe(true);
+      expect(result.descriptionUpdated).toBe(true);
+    });
+
+    test('skips source description fetch and target update when sync-repo-description=false', async () => {
+      // Only target fetch should happen
+      mockOctokit.rest.repos.get.mockResolvedValueOnce({
+        data: { visibility: 'private', description: 'untouched', archived: false }
+      });
+
+      const result = await mirrorRepository({
+        source: 'src/repo',
+        target: 'tgt/repo',
+        'sync-repo-description': false
+      });
+
+      // Only one repos.get call (the target), no source fetch
+      expect(mockOctokit.rest.repos.get).toHaveBeenCalledTimes(1);
+      expect(mockOctokit.rest.repos.get).toHaveBeenCalledWith({ owner: 'tgt', repo: 'repo' });
+      // No update call for description (the only update path here)
+      expect(mockOctokit.rest.repos.update).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.descriptionUpdated).toBe(false);
     });
   });
 });
