@@ -69,34 +69,6 @@ jest.unstable_mockModule('os', () => ({
   tmpdir: jest.fn(() => '/tmp')
 }));
 
-// Mock yargs - return a mock builder chain
-const mockYargsInstance = {
-  option: jest.fn().mockReturnThis(),
-  help: jest.fn().mockReturnThis(),
-  alias: jest.fn().mockReturnThis(),
-  example: jest.fn().mockReturnThis(),
-  wrap: jest.fn().mockReturnThis(),
-  version: jest.fn().mockReturnThis(),
-  parse: jest.fn(() => ({
-    file: 'test-repos.yml',
-    'source-github-token': '',
-    'target-github-token': '',
-    'source-github-api-url': 'https://api.github.com',
-    'target-github-api-url': 'https://api.github.com',
-    'overwrite-repo-visibility': false,
-    'force-push': false
-  }))
-};
-
-jest.unstable_mockModule('yargs', () => ({
-  default: jest.fn(() => mockYargsInstance)
-}));
-
-// Mock yargs/helpers
-jest.unstable_mockModule('yargs/helpers', () => ({
-  hideBin: jest.fn(args => args)
-}));
-
 // Mock js-yaml
 const mockYaml = {
   load: jest.fn(() => ({
