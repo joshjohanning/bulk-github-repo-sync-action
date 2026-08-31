@@ -6,7 +6,6 @@ import { jest } from '@jest/globals';
 
 // Set required environment variables before importing to prevent execution errors
 process.env.INPUT_SOURCE_GITHUB_TOKEN = 'ghp_test_source';
-process.env.INPUT_TARGET_GITHUB_TOKEN = 'ghp_test_target';
 process.env.INPUT_REPO_LIST_FILE = 'test-repos.yml';
 
 // Mock process.exit to prevent tests from exiting

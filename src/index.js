@@ -101,7 +101,10 @@ const SOURCE_GITHUB_URL = deriveInstanceUrl(SOURCE_GITHUB_API_URL);
 
 // Target configuration
 const TARGET_GITHUB_TOKEN =
-  core.getInput('target-github-token') || process.env.INPUT_TARGET_GITHUB_TOKEN || process.env.TARGET_GITHUB_TOKEN;
+  core.getInput('target-github-token') ||
+  process.env.INPUT_TARGET_GITHUB_TOKEN ||
+  process.env.TARGET_GITHUB_TOKEN ||
+  SOURCE_GITHUB_TOKEN;
 
 const TARGET_GITHUB_API_URL =
   core.getInput('target-github-api-url') ||
@@ -115,11 +118,6 @@ const TARGET_GITHUB_URL = deriveInstanceUrl(TARGET_GITHUB_API_URL);
 // Validation
 if (!SOURCE_GITHUB_TOKEN) {
   core.error('Error: SOURCE_GITHUB_TOKEN is required');
-  process.exit(1);
-}
-
-if (!TARGET_GITHUB_TOKEN) {
-  core.error('Error: TARGET_GITHUB_TOKEN is required');
   process.exit(1);
 }
 
