@@ -122,14 +122,15 @@ You can use a personal access token, but it is recommended to use GitHub Apps in
 | `overwrite-repo-visibility` | Force update visibility of existing repos                                                                                 | No       | `false`                              |
 | `force-push`                | Force push to target repositories (overwrites history)                                                                    | No       | `false`                              |
 
-## Local Command Line Usage
+## Local Usage
 
-You can also run the script directly:
+You can also run the action entry point locally using the same environment variables that GitHub Actions provides:
 
 ```bash
-export SOURCE_GITHUB_TOKEN=ghp_abc
-export TARGET_GITHUB_TOKEN=ghp_xyz
-node src/index.js --file=repos.yml
+INPUT_SOURCE_GITHUB_TOKEN=ghp_abc \
+INPUT_TARGET_GITHUB_TOKEN=ghp_xyz \
+INPUT_REPO_LIST_FILE=repos.yml \
+node src/index.js
 ```
 
 ## Sample Output

@@ -1,21 +1,6 @@
-#!/usr/bin/env node
-
 /**
- * Repository Sync Script (JavaScript/Node.js version)
+ * Repository Sync Action
  * Syncs GitHub repositories from source to target organizations using Octokit
- *
- * Usage:
- *   node index.js [--file=repo_list_file] [--source-github-token=token] [--target-github-token=token] [options]
- *
- * Command Line Options:
- *   --file, -f                     Repository list YAML file (default: actions-list.yml)
- *   --source-github-token          GitHub PAT for source repositories
- *   --target-github-token          GitHub PAT for target repositories
- *   --source-github-api-url        Source GitHub API URL (default: https://api.github.com)
- *   --target-github-api-url        Target GitHub API URL (defaults to source API URL)
- *   --overwrite-repo-visibility    Overwrite visibility of existing repos to match YAML (default: false)
- *   --force-push                   Force push to target repositories (default: false)
- *   --help, -h                     Show help
  *
  * Repository List Format (YAML):
  *   repos:
@@ -32,18 +17,9 @@
  *       archive-after-sync: true         # override default
  *       sync-repo-description: false     # override default
  *
- * Examples:
- *   node index.js --file=repos.yml
- *   node index.js --source-github-token=ghp_xxx --target-github-token=ghp_yyy
- *   node index.js --target-github-api-url=https://ghe.company.com/api/v3
- *   node index.js --source-github-api-url=https://api.github.com --target-github-api-url=https://api.customersuccess.ghe.com
- *   node index.js --overwrite-repo-visibility --file=repos.yml
- *   node index.js --force-push --file=repos.yml
- *
- * Environment Variables (fallback order):
+ * Configuration sources (fallback order):
  *   1. GitHub Actions inputs (INPUT_* variables) (highest priority)
- *   2. Command line arguments
- *   3. Direct environment variables
+ *   2. Direct environment variables
  *
  *   SOURCE_GITHUB_TOKEN / INPUT_SOURCE_GITHUB_TOKEN: Source GitHub Personal Access Token
  *   TARGET_GITHUB_TOKEN / INPUT_TARGET_GITHUB_TOKEN: Target GitHub Personal Access Token
@@ -56,62 +32,12 @@ import { execSync } from 'child_process';
 import { readFileSync, existsSync, mkdtempSync } from 'fs';
 import { resolve, join } from 'path';
 import { tmpdir } from 'os';
-import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
 import * as core from '@actions/core';
 import * as yaml from 'js-yaml';
 
 // Constants
 const CREDENTIAL_REGEX = /x-access-token:[^@]{1,200}@/g;
 const CREDENTIAL_REPLACEMENT = 'x-access-token:***@';
-
-// Parse command line arguments
-const argv = yargs(hideBin(process.argv))
-  .option('file', {
-    alias: 'f',
-    type: 'string',
-    description: 'Repository list YAML file'
-  })
-  .option('source-github-token', {
-    type: 'string',
-    description: 'GitHub PAT for source repositories'
-  })
-  .option('target-github-token', {
-    type: 'string',
-    description: 'GitHub PAT for target repositories'
-  })
-  .option('source-github-api-url', {
-    type: 'string',
-    description: 'Source GitHub API URL',
-    default: 'https://api.github.com'
-  })
-  .option('target-github-api-url', {
-    type: 'string',
-    description: 'Target GitHub API URL',
-    default: 'https://api.github.com'
-  })
-  .option('overwrite-repo-visibility', {
-    type: 'boolean',
-    description: 'Overwrite visibility of existing repositories to match YAML config',
-    default: false
-  })
-  .option('force-push', {
-    type: 'boolean',
-    description: 'Force push to target repositories (overwrites history)',
-    default: false
-  })
-  .help()
-  .alias('help', 'h')
-  .example('$0 --file=repos.yml', 'Sync repositories listed in repos.yml')
-  .example(
-    '$0 --source-github-token=ghp_xxx --target-github-token=ghp_yyy',
-    'Use different tokens for source and target'
-  )
-  .example('$0 --overwrite-repo-visibility --file=repos.yml', 'Update visibility of existing repos')
-  .example('$0 --force-push --file=repos.yml', 'Force push to overwrite target repository history')
-  .wrap(null)
-  .version()
-  .parse();
 
 /**
  * Derive instance/server URL from API URL
@@ -143,9 +69,8 @@ export function deriveInstanceUrl(apiUrl) {
   }
 }
 
-// Configuration - prioritize GitHub Actions inputs, then command line args, then environment variables
-const REPO_LIST =
-  core.getInput('repo-list-file') || process.env.INPUT_REPO_LIST_FILE || argv.file || 'actions-list.yml';
+// Configuration - prioritize GitHub Actions inputs, then environment variables
+const REPO_LIST = core.getInput('repo-list-file') || process.env.INPUT_REPO_LIST_FILE || 'actions-list.yml';
 
 // Safe boolean input reading for local execution
 function safeBooleanInput(name) {
@@ -157,25 +82,17 @@ function safeBooleanInput(name) {
 }
 
 const OVERWRITE_VISIBILITY =
-  safeBooleanInput('overwrite-repo-visibility') ||
-  process.env.INPUT_OVERWRITE_REPO_VISIBILITY === 'true' ||
-  argv['overwrite-repo-visibility'] ||
-  false;
+  safeBooleanInput('overwrite-repo-visibility') || process.env.INPUT_OVERWRITE_REPO_VISIBILITY === 'true' || false;
 
-const FORCE_PUSH =
-  safeBooleanInput('force-push') || process.env.INPUT_FORCE_PUSH === 'true' || argv['force-push'] || false;
+const FORCE_PUSH = safeBooleanInput('force-push') || process.env.INPUT_FORCE_PUSH === 'true' || false;
 
 // Source configuration
 const SOURCE_GITHUB_TOKEN =
-  core.getInput('source-github-token') ||
-  process.env.INPUT_SOURCE_GITHUB_TOKEN ||
-  argv['source-github-token'] ||
-  process.env.SOURCE_GITHUB_TOKEN;
+  core.getInput('source-github-token') || process.env.INPUT_SOURCE_GITHUB_TOKEN || process.env.SOURCE_GITHUB_TOKEN;
 
 const SOURCE_GITHUB_API_URL =
   core.getInput('source-github-api-url') ||
   process.env.INPUT_SOURCE_GITHUB_API_URL ||
-  argv['source-github-api-url'] ||
   process.env.SOURCE_GITHUB_API_URL ||
   'https://api.github.com';
 
@@ -186,13 +103,12 @@ const SOURCE_GITHUB_URL = deriveInstanceUrl(SOURCE_GITHUB_API_URL);
 const TARGET_GITHUB_TOKEN =
   core.getInput('target-github-token') ||
   process.env.INPUT_TARGET_GITHUB_TOKEN ||
-  argv['target-github-token'] ||
-  process.env.TARGET_GITHUB_TOKEN;
+  process.env.TARGET_GITHUB_TOKEN ||
+  SOURCE_GITHUB_TOKEN;
 
 const TARGET_GITHUB_API_URL =
   core.getInput('target-github-api-url') ||
   process.env.INPUT_TARGET_GITHUB_API_URL ||
-  argv['target-github-api-url'] ||
   process.env.TARGET_GITHUB_API_URL ||
   SOURCE_GITHUB_API_URL;
 
@@ -202,11 +118,6 @@ const TARGET_GITHUB_URL = deriveInstanceUrl(TARGET_GITHUB_API_URL);
 // Validation
 if (!SOURCE_GITHUB_TOKEN) {
   core.error('Error: SOURCE_GITHUB_TOKEN is required');
-  process.exit(1);
-}
-
-if (!TARGET_GITHUB_TOKEN) {
-  core.error('Error: TARGET_GITHUB_TOKEN is required');
   process.exit(1);
 }
 

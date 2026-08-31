@@ -6,7 +6,6 @@ import { jest } from '@jest/globals';
 
 // Set required environment variables before importing to prevent execution errors
 process.env.INPUT_SOURCE_GITHUB_TOKEN = 'ghp_test_source';
-process.env.INPUT_TARGET_GITHUB_TOKEN = 'ghp_test_target';
 process.env.INPUT_REPO_LIST_FILE = 'test-repos.yml';
 
 // Mock process.exit to prevent tests from exiting
@@ -67,34 +66,6 @@ jest.unstable_mockModule('path', () => ({
 // Mock os
 jest.unstable_mockModule('os', () => ({
   tmpdir: jest.fn(() => '/tmp')
-}));
-
-// Mock yargs - return a mock builder chain
-const mockYargsInstance = {
-  option: jest.fn().mockReturnThis(),
-  help: jest.fn().mockReturnThis(),
-  alias: jest.fn().mockReturnThis(),
-  example: jest.fn().mockReturnThis(),
-  wrap: jest.fn().mockReturnThis(),
-  version: jest.fn().mockReturnThis(),
-  parse: jest.fn(() => ({
-    file: 'test-repos.yml',
-    'source-github-token': '',
-    'target-github-token': '',
-    'source-github-api-url': 'https://api.github.com',
-    'target-github-api-url': 'https://api.github.com',
-    'overwrite-repo-visibility': false,
-    'force-push': false
-  }))
-};
-
-jest.unstable_mockModule('yargs', () => ({
-  default: jest.fn(() => mockYargsInstance)
-}));
-
-// Mock yargs/helpers
-jest.unstable_mockModule('yargs/helpers', () => ({
-  hideBin: jest.fn(args => args)
 }));
 
 // Mock js-yaml
