@@ -25,9 +25,9 @@ const mockCore = {
 jest.unstable_mockModule('@actions/core', () => mockCore);
 
 // Mock child_process
-const mockExecSync = jest.fn();
+const mockExecFileSync = jest.fn();
 jest.unstable_mockModule('child_process', () => ({
-  execSync: mockExecSync
+  execFileSync: mockExecFileSync
 }));
 
 // Mock @octokit/rest
@@ -52,7 +52,8 @@ jest.unstable_mockModule('@octokit/rest', () => ({
 const mockFs = {
   readFileSync: jest.fn(() => 'repos:\n  - source: org/repo\n    target: target/repo'),
   existsSync: jest.fn(() => true),
-  mkdtempSync: jest.fn(() => '/tmp/test-dir')
+  mkdtempSync: jest.fn(() => '/tmp/test-dir'),
+  rmSync: jest.fn()
 };
 
 jest.unstable_mockModule('fs', () => mockFs);
@@ -84,7 +85,8 @@ const mockYaml = {
 jest.unstable_mockModule('js-yaml', () => mockYaml);
 
 // Import functions after mocking
-const { deriveInstanceUrl, sanitizeError, ensureRepository, mirrorRepository } = await import('../src/index.js');
+const { deriveInstanceUrl, sanitizeError, parseRepositoryName, ensureRepository, mirrorRepository } =
+  await import('../src/index.js');
 
 describe('Repository Sync Action - Helper Functions', () => {
   beforeEach(() => {
@@ -393,27 +395,29 @@ describe('Repository Sync Action - Integration Tests', () => {
 
   describe('Organization and repository name parsing', () => {
     test('should parse org/repo format correctly', () => {
-      const fullName = 'my-org/my-repo';
-      const [org, repo] = fullName.split('/');
+      const [org, repo] = parseRepositoryName('my-org/my-repo', 'source repository');
 
       expect(org).toBe('my-org');
       expect(repo).toBe('my-repo');
     });
 
-    test('should handle repos with multiple slashes', () => {
-      const fullName = 'org/sub/repo';
-      const parts = fullName.split('/');
-
-      expect(parts.length).toBe(3);
-      expect(parts[0]).toBe('org');
-    });
-
-    test('should handle empty org or repo gracefully', () => {
-      const invalidName = '/repo';
-      const [org, repo] = invalidName.split('/');
-
-      expect(org).toBe('');
-      expect(repo).toBe('repo');
+    test.each([
+      'org/sub/repo',
+      '/repo',
+      'org/',
+      'org--name/repo',
+      'org/repo; echo injected',
+      `org/repo' injected`,
+      'org/repo$(echo injected)',
+      'org/repo`echo injected`',
+      'org/repo\ninjected',
+      'org\n/repo',
+      'org/repo\n',
+      'org/repo\r',
+      'org/repo\u2028',
+      'org/repo\u2029'
+    ])('should reject invalid repository name %j', invalidName => {
+      expect(() => parseRepositoryName(invalidName, 'source repository')).toThrow('Invalid source repository');
     });
   });
 });
@@ -421,7 +425,7 @@ describe('Repository Sync Action - Integration Tests', () => {
 describe('Repository Operations with Mocked APIs', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockExecSync.mockReturnValue('');
+    mockExecFileSync.mockReturnValue('');
   });
 
   describe('Repository existence and creation', () => {
@@ -616,36 +620,14 @@ describe('Repository Operations with Mocked APIs', () => {
   });
 
   describe('Git command execution', () => {
-    test('should execute git clone command', () => {
-      mockExecSync.mockReturnValue('');
-
-      mockExecSync('git clone --mirror https://github.com/org/repo.git', {
-        stdio: 'inherit',
-        encoding: 'utf8'
-      });
-
-      expect(mockExecSync).toHaveBeenCalled();
-    });
-
-    test('should execute git push command', () => {
-      mockExecSync.mockReturnValue('');
-
-      mockExecSync('git push --mirror https://github.com/target-org/repo.git', {
-        stdio: 'inherit',
-        encoding: 'utf8'
-      });
-
-      expect(mockExecSync).toHaveBeenCalled();
-    });
-
     test('should handle command execution error', () => {
       const error = new Error('git command failed');
-      mockExecSync.mockImplementation(() => {
+      mockExecFileSync.mockImplementation(() => {
         throw error;
       });
 
       expect(() => {
-        mockExecSync('git invalid-command');
+        mockExecFileSync('git', ['invalid-command'], { shell: false });
       }).toThrow('git command failed');
     });
 
@@ -778,7 +760,7 @@ repos:
 describe('sync-repo-description option', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockExecSync.mockReturnValue('');
+    mockExecFileSync.mockReturnValue('');
   });
 
   describe('ensureRepository', () => {
@@ -861,6 +843,46 @@ describe('sync-repo-description option', () => {
       );
       expect(result.success).toBe(true);
       expect(result.descriptionUpdated).toBe(true);
+      expect(mockExecFileSync).toHaveBeenNthCalledWith(
+        1,
+        'git',
+        [
+          'clone',
+          '--mirror',
+          '--',
+          'https://x-access-token:ghp_test_source@github.com/src/repo.git',
+          '/tmp/test-dir/repo.git'
+        ],
+        {
+          stdio: 'inherit',
+          encoding: 'utf8',
+          shell: false
+        }
+      );
+      expect(mockExecFileSync).toHaveBeenNthCalledWith(
+        2,
+        'git',
+        ['push', '--', 'https://x-access-token:ghp_test_source@github.com/tgt/repo.git', 'refs/heads/*:refs/heads/*'],
+        {
+          stdio: 'inherit',
+          encoding: 'utf8',
+          shell: false
+        }
+      );
+      expect(mockExecFileSync).toHaveBeenNthCalledWith(
+        3,
+        'git',
+        ['push', '--', 'https://x-access-token:ghp_test_source@github.com/tgt/repo.git', 'refs/tags/*:refs/tags/*'],
+        {
+          stdio: 'inherit',
+          encoding: 'utf8',
+          shell: false
+        }
+      );
+      expect(mockFs.rmSync).toHaveBeenCalledWith('/tmp/test-dir', {
+        recursive: true,
+        force: true
+      });
     });
 
     test('skips source description fetch and target update when sync-repo-description=false', async () => {
@@ -882,6 +904,38 @@ describe('sync-repo-description option', () => {
       expect(mockOctokit.rest.repos.update).not.toHaveBeenCalled();
       expect(result.success).toBe(true);
       expect(result.descriptionUpdated).toBe(false);
+    });
+
+    test('sanitizes Git errors and cleans up the temporary directory', async () => {
+      mockOctokit.rest.repos.get
+        .mockResolvedValueOnce({ data: { description: 'from source' } })
+        .mockResolvedValueOnce({ data: { visibility: 'private', description: 'from source', archived: false } });
+      mockExecFileSync.mockImplementationOnce(() => {
+        throw new Error('git clone failed for https://x-access-token:ghp_secret@github.com/src/repo.git');
+      });
+
+      const result = await mirrorRepository({ source: 'src/repo', target: 'tgt/repo' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('x-access-token:***@');
+      expect(result.error).not.toContain('ghp_secret');
+      expect(mockFs.rmSync).toHaveBeenCalledWith('/tmp/test-dir', {
+        recursive: true,
+        force: true
+      });
+    });
+
+    test.each([
+      { source: 'src/repo/"; echo injected', target: 'tgt/repo' },
+      { source: 'src/repo', target: 'tgt/repo/"; echo injected' }
+    ])('rejects unsafe repository configuration before API or Git operations', async repoConfig => {
+      const result = await mirrorRepository(repoConfig);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/^Invalid (source|target) repository/);
+      expect(mockOctokit.rest.repos.get).not.toHaveBeenCalled();
+      expect(mockExecFileSync).not.toHaveBeenCalled();
+      expect(mockFs.mkdtempSync).not.toHaveBeenCalled();
     });
   });
 });

@@ -56,6 +56,8 @@ repos:
     archive-after-sync: false # Optional: archive repo after sync (defaults to false)
 ```
 
+The `source` and `target` values must each use the exact `owner/repository` format with GitHub-compatible owner and repository name characters.
+
 ### Sample Configuration
 
 See [sample file](./sample-repos-list.yml).

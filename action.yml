@@ -7,7 +7,7 @@ branding:
 
 inputs:
   repo-list-file:
-    description: 'YAML file containing repository mappings with source, target, visibility, and sync options'
+    description: 'YAML file containing owner/repository source and target mappings, visibility, and sync options'
     required: true
   source-github-token:
     description: 'GitHub Personal Access Token for accessing source repositories'
