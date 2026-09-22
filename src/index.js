@@ -28,8 +28,8 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import { execSync } from 'child_process';
-import { readFileSync, existsSync, mkdtempSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { readFileSync, existsSync, mkdtempSync, rmSync } from 'fs';
 import { resolve, join } from 'path';
 import { tmpdir } from 'os';
 import * as core from '@actions/core';
@@ -38,6 +38,8 @@ import * as yaml from 'js-yaml';
 // Constants
 const CREDENTIAL_REGEX = /x-access-token:[^@]{1,200}@/g;
 const CREDENTIAL_REPLACEMENT = 'x-access-token:***@';
+const OWNER_NAME_REGEX = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+const REPOSITORY_NAME_REGEX = /^(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/;
 
 /**
  * Derive instance/server URL from API URL
@@ -166,21 +168,39 @@ export function sanitizeError(error) {
 }
 
 /**
- * Execute shell command with error handling
+ * Parse and validate a GitHub repository name.
+ * @param {unknown} value - Repository name to parse.
+ * @param {string} fieldName - Configuration field name used in validation errors.
+ * @returns {[string, string]} Owner and repository name.
  */
-function execCommand(command, options = {}) {
+export function parseRepositoryName(value, fieldName) {
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid ${fieldName}: expected owner/repository`);
+  }
+
+  const parts = value.split('/');
+  if (parts.length !== 2 || !OWNER_NAME_REGEX.test(parts[0]) || !REPOSITORY_NAME_REGEX.test(parts[1])) {
+    throw new Error(`Invalid ${fieldName}: expected owner/repository using GitHub-compatible characters`);
+  }
+
+  return /** @type {[string, string]} */ (parts);
+}
+
+/**
+ * Execute Git without invoking a shell.
+ * @param {string[]} args - Arguments passed directly to Git.
+ * @returns {Buffer|string} Git command output.
+ */
+function execGit(args) {
   try {
-    return execSync(command, {
+    return execFileSync('git', args, {
       stdio: 'inherit',
       encoding: 'utf8',
-      ...options
+      shell: false
     });
   } catch (error) {
-    if (!options.ignoreErrors) {
-      error.message = sanitizeError(error);
-      throw error;
-    }
-    core.info(`Command failed (ignoring): ${command}`);
+    error.message = sanitizeError(error);
+    throw error;
   }
 }
 
@@ -391,8 +411,23 @@ export async function mirrorRepository(repoConfig) {
     'archive-after-sync': archiveAfterSync = false, // default to false
     'sync-repo-description': syncRepoDescription = true // default to true
   } = repoConfig;
-  const [sourceOrg, sourceRepoName] = source.split('/');
-  const [targetOrg, targetRepoName] = target.split('/');
+
+  let sourceOrg;
+  let sourceRepoName;
+  let targetOrg;
+  let targetRepoName;
+
+  try {
+    [sourceOrg, sourceRepoName] = parseRepositoryName(source, 'source repository');
+    [targetOrg, targetRepoName] = parseRepositoryName(target, 'target repository');
+  } catch (error) {
+    core.error(error.message);
+    return {
+      success: false,
+      repo: typeof target === 'string' ? target : 'unknown',
+      error: error.message
+    };
+  }
 
   const cloneUrl = `${SOURCE_GITHUB_URL}/${source}.git`;
   const pushUrl = `${TARGET_GITHUB_URL}/${target}.git`;
@@ -450,7 +485,7 @@ export async function mirrorRepository(repoConfig) {
 
   try {
     core.info(`Cloning ${cloneUrl}...`);
-    execCommand(`git clone --mirror "${authenticatedCloneUrl}" "${repoDir}"`);
+    execGit(['clone', '--mirror', '--', authenticatedCloneUrl, repoDir]);
 
     process.chdir(repoDir);
 
@@ -459,11 +494,11 @@ export async function mirrorRepository(repoConfig) {
     // Push refs selectively (exclude pull request refs)
     core.info(`Pushing branches and tags to ${targetOrg}/${targetRepoName}...`);
 
-    const forceFlag = FORCE_PUSH ? ' --force' : '';
+    const pushOptions = FORCE_PUSH ? ['--force'] : [];
 
     // Try to push branches
     try {
-      execCommand(`git push${forceFlag} "${authenticatedPushUrl}" 'refs/heads/*:refs/heads/*'`);
+      execGit(['push', ...pushOptions, '--', authenticatedPushUrl, 'refs/heads/*:refs/heads/*']);
       core.info('✅ Branches pushed successfully');
     } catch (error) {
       const sanitizedError = sanitizeError(error);
@@ -473,7 +508,7 @@ export async function mirrorRepository(repoConfig) {
 
     // Try to push tags
     try {
-      execCommand(`git push${forceFlag} "${authenticatedPushUrl}" 'refs/tags/*:refs/tags/*'`);
+      execGit(['push', ...pushOptions, '--', authenticatedPushUrl, 'refs/tags/*:refs/tags/*']);
       core.info('✅ Tags pushed successfully');
     } catch (error) {
       const sanitizedError = sanitizeError(error);
@@ -507,8 +542,12 @@ export async function mirrorRepository(repoConfig) {
     };
   } finally {
     process.chdir(originalCwd);
-    execCommand(`rm -rf "${tempDir}"`, { ignoreErrors: true });
-    core.info(`Cleaned up temp directory: ${tempDir}`);
+    try {
+      rmSync(tempDir, { recursive: true, force: true });
+      core.info(`Cleaned up temp directory: ${tempDir}`);
+    } catch (error) {
+      core.warning(`Failed to clean up temp directory: ${sanitizeError(error)}`);
+    }
   }
 }
 
