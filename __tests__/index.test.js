@@ -405,11 +405,17 @@ describe('Repository Sync Action - Integration Tests', () => {
       'org/sub/repo',
       '/repo',
       'org/',
+      'org--name/repo',
       'org/repo; echo injected',
       `org/repo' injected`,
       'org/repo$(echo injected)',
       'org/repo`echo injected`',
-      'org/repo\ninjected'
+      'org/repo\ninjected',
+      'org\n/repo',
+      'org/repo\n',
+      'org/repo\r',
+      'org/repo\u2028',
+      'org/repo\u2029'
     ])('should reject invalid repository name %j', invalidName => {
       expect(() => parseRepositoryName(invalidName, 'source repository')).toThrow('Invalid source repository');
     });
@@ -898,6 +904,25 @@ describe('sync-repo-description option', () => {
       expect(mockOctokit.rest.repos.update).not.toHaveBeenCalled();
       expect(result.success).toBe(true);
       expect(result.descriptionUpdated).toBe(false);
+    });
+
+    test('sanitizes Git errors and cleans up the temporary directory', async () => {
+      mockOctokit.rest.repos.get
+        .mockResolvedValueOnce({ data: { description: 'from source' } })
+        .mockResolvedValueOnce({ data: { visibility: 'private', description: 'from source', archived: false } });
+      mockExecFileSync.mockImplementationOnce(() => {
+        throw new Error('git clone failed for https://x-access-token:ghp_secret@github.com/src/repo.git');
+      });
+
+      const result = await mirrorRepository({ source: 'src/repo', target: 'tgt/repo' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('x-access-token:***@');
+      expect(result.error).not.toContain('ghp_secret');
+      expect(mockFs.rmSync).toHaveBeenCalledWith('/tmp/test-dir', {
+        recursive: true,
+        force: true
+      });
     });
 
     test.each([

@@ -38,7 +38,8 @@ import * as yaml from 'js-yaml';
 // Constants
 const CREDENTIAL_REGEX = /x-access-token:[^@]{1,200}@/g;
 const CREDENTIAL_REPLACEMENT = 'x-access-token:***@';
-const OWNER_NAME_REGEX = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+const LINE_TERMINATOR_REGEX = /[\r\n\u2028\u2029]/;
+const OWNER_NAME_REGEX = /^(?!.*--)[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 const REPOSITORY_NAME_REGEX = /^(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/;
 
 /**
@@ -179,7 +180,12 @@ export function parseRepositoryName(value, fieldName) {
   }
 
   const parts = value.split('/');
-  if (parts.length !== 2 || !OWNER_NAME_REGEX.test(parts[0]) || !REPOSITORY_NAME_REGEX.test(parts[1])) {
+  if (
+    parts.length !== 2 ||
+    LINE_TERMINATOR_REGEX.test(value) ||
+    !OWNER_NAME_REGEX.test(parts[0]) ||
+    !REPOSITORY_NAME_REGEX.test(parts[1])
+  ) {
     throw new Error(`Invalid ${fieldName}: expected owner/repository using GitHub-compatible characters`);
   }
 
